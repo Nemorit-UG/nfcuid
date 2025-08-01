@@ -9,6 +9,7 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
+	"encoding/binary"
 
 	"github.com/ebfe/scard"
 	"github.com/taglme/string2keyboard"
@@ -34,6 +35,13 @@ type Flags struct {
 
 type service struct {
 	flags Flags
+}
+
+func UIDToUint32(uid []byte) uint32 {
+    if len(uid) != 4 {
+        panic("UID must be 4 bytes")
+    }
+    return binary.LittleEndian.Uint32(uid)
 }
 
 func (s *service) Start() {
@@ -179,7 +187,8 @@ func (s *service) formatOutput(rx []byte) string {
 	for i, rxByte := range rx {
 		var byteStr string
 		if s.flags.Decimal {
-			byteStr = fmt.Sprintf("%03d", rxByte)
+			number := UIDToUint32(reversed)
+			byteStr = fmt.Sprintf(number)
 		} else {
 			if s.flags.CapsLock {
 				byteStr = fmt.Sprintf("%02X", rxByte)
