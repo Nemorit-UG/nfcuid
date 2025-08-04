@@ -33,7 +33,7 @@ archives:
       format: zip
 release:
   github:
-    owner: taglme
+    owner: Nemorit-UG
     name: nfcuid
   ids:
     - default
