@@ -5,15 +5,6 @@ before:
   hooks:
     - go mod download
 builds:
-- id: nfcuid-darwin-amd64
-  env:
-  - CGO_ENABLED=1
-  - CC=o64-clang 
-  - CXX=o64-clang++
-  goos:
-    - darwin
-  goarch:
-    - amd64
 - id: nfcuid-windows-amd64
   env:
   - CGO_ENABLED=1
@@ -36,7 +27,6 @@ archives:
   builds:
   - nfcuid-linux-amd64
   - nfcuid-windows-amd64
-  - nfcuid-darwin-amd64
   name_template: "{{ .ProjectName }}_{{ .Os }}_{{ .Arch }}_{{ .Version }}"
   format_overrides:
     - goos: windows
