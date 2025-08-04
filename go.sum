@@ -4,3 +4,5 @@ github.com/micmonay/keybd_event v1.1.0 h1:fQzkqiG/Siwji1Ju9NDkIb8FSFFlPU76YbJntr
 github.com/micmonay/keybd_event v1.1.0/go.mod h1:QS2Kfz0PbPezFqMPEot+l/cK78/tHLZtZ7AbYUCRKsQ=
 github.com/taglme/string2keyboard v0.0.0-20190317231536-45ba78797368 h1:8RASeTus7O97xn1yBltSjFZJcLDT8tFmeRQEBTvhoV4=
 github.com/taglme/string2keyboard v0.0.0-20190317231536-45ba78797368/go.mod h1:jTrad2xtVdS9K6UfyWJcJ39D0b3U13u4EX0esoaGisY=
+golang.org/x/sys v0.34.0 h1:H5Y5sJ2L2JRdyv7ROF1he/lPdvFsd0mJHFw2ThKHxLA=
+golang.org/x/sys v0.34.0/go.mod h1:BJP2sWEmIv4KK5OTEluFJCKSidICx8ciO85XgH3Ak8k=

@@ -3,13 +3,13 @@ package main
 import (
 	"bufio"
 	"bytes"
+	"encoding/binary"
 	"errors"
 	"fmt"
 	"os"
 	"runtime"
 	"strconv"
 	"strings"
-	"encoding/binary"
 
 	"github.com/ebfe/scard"
 	"github.com/taglme/string2keyboard"
@@ -184,12 +184,12 @@ func (s *service) formatOutput(rx []byte) string {
 		}
 	}
 
-	for i, rxByte := range rx {
-		var byteStr string
-		if s.flags.Decimal {
-			number := UIDToUint32(reversed)
-			byteStr = fmt.Sprintf(number)
-		} else {
+	if s.flags.Decimal {
+		number := UIDToUint32(rx)
+		output = fmt.Sprintf("%d", number)
+	} else {
+		for i, rxByte := range rx {
+			var byteStr string
 			if s.flags.CapsLock {
 				byteStr = fmt.Sprintf("%02X", rxByte)
 			} else {
@@ -197,12 +197,12 @@ func (s *service) formatOutput(rx []byte) string {
 
 			}
 
-		}
-		output = output + byteStr
-		if i < len(rx)-1 {
-			output = output + s.flags.InChar.Output()
-		}
+			output = output + byteStr
+			if i < len(rx)-1 {
+				output = output + s.flags.InChar.Output()
+			}
 
+		}
 	}
 
 	output = output + s.flags.EndChar.Output()
