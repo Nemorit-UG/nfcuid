@@ -1,36 +1,47 @@
 package main
 
 import (
-	"errors"
-	"flag"
+	"fmt"
+	"os"
 )
 
 func main() {
-	var appFlags Flags
-	var endChar, inChar string
-	var ok bool
-	//Read application flags
-	flag.StringVar(&endChar, "end-char", "none", "Character at the end of UID. Options: "+CharFlagOptions())
-	flag.StringVar(&inChar, "in-char", "none", "Сharacter between bytes of UID. Options: "+CharFlagOptions())
-	flag.BoolVar(&appFlags.CapsLock, "caps-lock", false, "UID with Caps Lock")
-	flag.BoolVar(&appFlags.Reverse, "reverse", false, "UID reverse order")
-	flag.BoolVar(&appFlags.Decimal, "decimal", false, "UID in decimal format")
-	flag.IntVar(&appFlags.Device, "device", 0, "Device number to use")
-	flag.Parse()
+	fmt.Println("NFC UID Reader - Enhanced Version")
+	fmt.Println("==================================")
 
-	//Check flags
-	appFlags.EndChar, ok = StringToCharFlag(endChar)
-	if !ok {
-		errorExit(errors.New("Unknown end character flag. Run with '-h' flag to check options"))
-		return
-	}
-	appFlags.InChar, ok = StringToCharFlag(inChar)
-	if !ok {
-		errorExit(errors.New("Unknown in character flag. Run with '-h' flag to check options"))
-		return
+	// Load configuration
+	config, err := LoadConfig()
+	if err != nil {
+		fmt.Printf("Failed to load configuration: %v\n", err)
+		os.Exit(1)
 	}
 
-	service := NewService(appFlags)
+	// Initialize notification manager
+	notificationManager := NewNotificationManager(config)
+	
+	// Initialize browser manager
+	var browserManager *BrowserManager
+	if config.Web.OpenWebsite {
+		browserManager = NewBrowserManager(config.Web.Fullscreen)
+		
+		// Open browser window on startup
+		fmt.Printf("Opening browser: %s\n", config.Web.WebsiteURL)
+		if err := browserManager.OpenURL(config.Web.WebsiteURL); err != nil {
+			notificationManager.NotifyError(fmt.Sprintf("Failed to open browser: %v", err))
+			fmt.Printf("Warning: Failed to open browser: %v\n", err)
+		} else {
+			notificationManager.NotifyInfo("NFC Reader", "Browser opened successfully")
+		}
+	}
+
+	// Convert config to legacy Flags struct for compatibility
+	appFlags := config.ToFlags()
+
+	// Initialize and start the NFC service
+	service := NewService(appFlags, config, notificationManager)
+	
+	fmt.Println("Starting NFC card reader service...")
+	notificationManager.NotifyInfo("NFC Reader", "Service started - ready to read cards")
+	
 	service.Start()
-
 }

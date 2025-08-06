@@ -10,9 +10,10 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
+	"time"
 
+	"github.com/micmonay/keybd_event"
 	"github.com/ebfe/scard"
-	"github.com/taglme/string2keyboard"
 )
 
 type Service interface {
@@ -20,8 +21,13 @@ type Service interface {
 	Flags() Flags
 }
 
-func NewService(flags Flags) Service {
-	return &service{flags}
+func NewService(flags Flags, config *Config, notificationManager *NotificationManager) Service {
+	return &service{
+		flags:               flags,
+		config:              config,
+		notificationManager: notificationManager,
+		retryManager:        NewRetryManager(config.Advanced.RetryAttempts, config.Advanced.ReconnectDelay),
+	}
 }
 
 type Flags struct {
@@ -34,146 +40,91 @@ type Flags struct {
 }
 
 type service struct {
-	flags Flags
+	flags               Flags
+	config              *Config
+	notificationManager *NotificationManager
+	retryManager        *RetryManager
 }
 
-func UIDToUint32(uid []byte) uint32 {
+func UIDToUint32(uid []byte) (uint32, error) {
     if len(uid) != 4 {
-        panic("UID must be 4 bytes")
+        return 0, fmt.Errorf("UID must be 4 bytes, got %d bytes", len(uid))
     }
-    return binary.LittleEndian.Uint32(uid)
+    return binary.LittleEndian.Uint32(uid), nil
 }
 
 func (s *service) Start() {
-	//Establish a context
-	ctx, err := scard.EstablishContext()
+	for {
+		if err := s.runServiceLoop(); err != nil {
+			s.notificationManager.NotifyError(fmt.Sprintf("Service error: %v", err))
+			fmt.Printf("Service encountered an error: %v\n", err)
+			
+			if s.config.Advanced.AutoReconnect {
+				fmt.Printf("Attempting to restart service in %d seconds...\n", s.config.Advanced.ReconnectDelay)
+				time.Sleep(time.Duration(s.config.Advanced.ReconnectDelay) * time.Second)
+				continue
+			} else {
+				SafeExit(1, "Service stopped due to error", s.notificationManager)
+			}
+		}
+	}
+}
+
+func (s *service) runServiceLoop() error {
+	// Establish PC/SC context with retry logic
+	var ctx *scard.Context
+	err := s.retryManager.Retry(func() error {
+		var err error
+		ctx, err = scard.EstablishContext()
+		return err
+	})
 	if err != nil {
-		errorExit(err)
+		return fmt.Errorf("failed to establish PC/SC context: %v", err)
 	}
 	defer ctx.Release()
 
-	//List available readers
+	// List available readers
 	readers, err := ctx.ListReaders()
 	if err != nil {
-		errorExit(err)
+		return fmt.Errorf("failed to list readers: %v", err)
 	}
 
 	if len(readers) < 1 {
-		errorExit(errors.New("Devices not found. Try to plug-in new device and restart"))
+		return errors.New("no NFC readers found. Please connect a device and restart")
 	}
 
-	fmt.Printf("Found %d device:\n", len(readers))
+	fmt.Printf("Found %d device(s):\n", len(readers))
 	for i, reader := range readers {
 		fmt.Printf("[%d] %s\n", i+1, reader)
 	}
 
-	if s.flags.Device == 0 {
-		//Device should be selected by user input
-		for {
-			fmt.Print("Enter device number to start: ")
-			inputReader := bufio.NewReader(os.Stdin)
-			deviceStr, _ := inputReader.ReadString('\n')
-
-			if runtime.GOOS == "windows" {
-				deviceStr = strings.Replace(deviceStr, "\r\n", "", -1)
-			} else {
-				deviceStr = strings.Replace(deviceStr, "\n", "", -1)
-			}
-			deviceInt, err := strconv.Atoi(deviceStr)
-			if err != nil {
-				fmt.Println("Please input integer value")
-				continue
-			}
-			if deviceInt < 0 {
-				fmt.Println("Please input positive integer value")
-				continue
-			}
-			if deviceInt > len(readers) {
-				fmt.Printf("Value should be less than or equal to %d\n", len(readers))
-				continue
-			}
-			s.flags.Device = deviceInt
-			break
-		}
-	} else if s.flags.Device < 0 {
-		errorExit(errors.New("Device flag should positive integer"))
-		return
-	} else if s.flags.Device > len(readers) {
-		errorExit(errors.New("Device flag should not exceed the number of available devices"))
-		return
+	// Select device
+	if err := s.selectDevice(readers); err != nil {
+		return err
 	}
 
-	fmt.Println("Selected device:")
-	fmt.Printf("[%d] %s\n", s.flags.Device, readers[s.flags.Device-1])
+	fmt.Printf("Selected device: [%d] %s\n", s.flags.Device, readers[s.flags.Device-1])
 	selectedReaders := []string{readers[s.flags.Device-1]}
 
-	for {
-		fmt.Println("Waiting for a Card")
-		index, err := waitUntilCardPresent(ctx, selectedReaders)
-		if err != nil {
-			errorExit(err)
-		}
-
-		//Connect to card
-		fmt.Println("Connecting to card...")
-		card, err := ctx.Connect(selectedReaders[index], scard.ShareShared, scard.ProtocolAny)
-		if err != nil {
-			errorExit(err)
-		}
-		defer card.Disconnect(scard.ResetCard)
-
-		//GET DATA command
-		var cmd = []byte{0xFF, 0xCA, 0x00, 0x00, 0x00}
-
-		rsp, err := card.Transmit(cmd)
-		if err != nil {
-			errorExit(err)
-		}
-
-		if len(rsp) < 2 {
-			fmt.Println("Not enough bytes in answer. Try again")
-			card.Disconnect(scard.ResetCard)
-			continue
-		}
-
-		//Check response code - two last bytes of response
-		rspCodeBytes := rsp[len(rsp)-2 : len(rsp)]
-		successResponseCode := []byte{0x90, 0x00}
-		if !bytes.Equal(rspCodeBytes, successResponseCode) {
-			fmt.Printf("Operation failed to complete. Error code % x\n", rspCodeBytes)
-			card.Disconnect(scard.ResetCard)
-			continue
-		}
-
-		uidBytes := rsp[0 : len(rsp)-2]
-		fmt.Printf("UID is: % x\n", uidBytes)
-		fmt.Printf("Writting as keyboard input...")
-		err = string2keyboard.KeyboardWrite(s.formatOutput(uidBytes))
-		if err != nil {
-			fmt.Printf("Could write as keyboard output. Error: %s\n", err.Error())
-		} else {
-			fmt.Printf("Success!\n")
-		}
-
-		card.Disconnect(scard.ResetCard)
-
-		//Wait while card will be released
-		fmt.Print("Waiting for card release...")
-		err = waitUntilCardRelease(ctx, selectedReaders, index)
-		fmt.Println("Card released")
-
+	// Initialize keyboard
+	kb, err := keybd_event.NewKeyBonding()
+	if err != nil {
+		return fmt.Errorf("failed to initialize keyboard: %v", err)
 	}
 
+	// Linux requires a delay for keyboard initialization
+	if runtime.GOOS == "linux" {
+		time.Sleep(2 * time.Second)
+	}
+
+	// Main card reading loop
+	return s.cardReadingLoop(ctx, selectedReaders, kb)
 }
 
 func (s *service) Flags() Flags {
 	return s.flags
 }
 
-func errorExit(err error) {
-	fmt.Println(err)
-	os.Exit(1)
-}
 
 func (s *service) formatOutput(rx []byte) string {
 	var output string
@@ -185,23 +136,29 @@ func (s *service) formatOutput(rx []byte) string {
 	}
 
 	if s.flags.Decimal {
-		number := UIDToUint32(rx)
-		output = fmt.Sprintf("%d", number)
-	} else {
+		number, err := UIDToUint32(rx)
+		if err != nil {
+			s.notificationManager.NotifyError(fmt.Sprintf("Failed to convert UID to decimal: %v", err))
+			// Fallback to hex format
+			s.flags.Decimal = false
+		} else {
+			output = fmt.Sprintf("%d", number)
+		}
+	}
+	
+	if !s.flags.Decimal {
 		for i, rxByte := range rx {
 			var byteStr string
 			if s.flags.CapsLock {
 				byteStr = fmt.Sprintf("%02X", rxByte)
 			} else {
 				byteStr = fmt.Sprintf("%02x", rxByte)
-
 			}
 
 			output = output + byteStr
 			if i < len(rx)-1 {
 				output = output + s.flags.InChar.Output()
 			}
-
 		}
 	}
 
@@ -248,4 +205,148 @@ func waitUntilCardRelease(ctx *scard.Context, readers []string, index int) error
 			return err
 		}
 	}
+}
+
+func (s *service) selectDevice(readers []string) error {
+	if s.flags.Device == 0 {
+		// Interactive device selection
+		for {
+			fmt.Print("Enter device number to start: ")
+			inputReader := bufio.NewReader(os.Stdin)
+			deviceStr, _ := inputReader.ReadString('\n')
+
+			if runtime.GOOS == "windows" {
+				deviceStr = strings.Replace(deviceStr, "\r\n", "", -1)
+			} else {
+				deviceStr = strings.Replace(deviceStr, "\n", "", -1)
+			}
+
+			deviceInt, err := strconv.Atoi(deviceStr)
+			if err != nil {
+				fmt.Println("Please input integer value")
+				continue
+			}
+			if deviceInt < 1 || deviceInt > len(readers) {
+				fmt.Printf("Value should be between 1 and %d\n", len(readers))
+				continue
+			}
+			s.flags.Device = deviceInt
+			break
+		}
+	} else if s.flags.Device < 1 || s.flags.Device > len(readers) {
+		return fmt.Errorf("device number should be between 1 and %d, got: %d", len(readers), s.flags.Device)
+	}
+
+	return nil
+}
+
+func (s *service) cardReadingLoop(ctx *scard.Context, selectedReaders []string, kb keybd_event.KeyBonding) error {
+	for {
+		fmt.Println("Waiting for a Card...")
+		
+		// Wait for card present with error handling
+		index, err := s.waitForCardWithRetry(ctx, selectedReaders)
+		if err != nil {
+			s.notificationManager.NotifyError(fmt.Sprintf("Card detection error: %v", err))
+			if s.config.Advanced.AutoReconnect {
+				continue
+			}
+			return err
+		}
+
+		// Process the card
+		if err := s.processCard(ctx, selectedReaders, index, kb); err != nil {
+			s.notificationManager.NotifyError(fmt.Sprintf("Card processing error: %v", err))
+			fmt.Printf("Card processing failed: %v\n", err)
+			// Continue to next card instead of exiting
+			continue
+		}
+	}
+}
+
+func (s *service) waitForCardWithRetry(ctx *scard.Context, readers []string) (int, error) {
+	var index int
+	err := s.retryManager.Retry(func() error {
+		var err error
+		index, err = waitUntilCardPresent(ctx, readers)
+		return err
+	})
+	return index, err
+}
+
+func (s *service) processCard(ctx *scard.Context, selectedReaders []string, index int, kb keybd_event.KeyBonding) error {
+	fmt.Println("Connecting to card...")
+	
+	// Connect to card with retry
+	var card *scard.Card
+	err := s.retryManager.Retry(func() error {
+		var err error
+		card, err = ctx.Connect(selectedReaders[index], scard.ShareShared, scard.ProtocolAny)
+		return err
+	})
+	if err != nil {
+		return fmt.Errorf("failed to connect to card: %v", err)
+	}
+	defer card.Disconnect(scard.ResetCard)
+
+	// Read UID with retry
+	uidBytes, err := s.readCardUID(card)
+	if err != nil {
+		return err
+	}
+
+	fmt.Printf("UID is: % x\n", uidBytes)
+
+	// Format and send keyboard output
+	output := s.formatOutput(uidBytes)
+	fmt.Print("Writing as keyboard input...")
+	
+	if err := KeyboardWrite(output, kb); err != nil {
+		s.notificationManager.NotifyError(fmt.Sprintf("Keyboard write failed: %v", err))
+		return fmt.Errorf("failed to write keyboard output: %v", err)
+	}
+
+	fmt.Println("Success!")
+	s.notificationManager.NotifySuccess(fmt.Sprintf("Card UID: %s", output))
+
+	// Wait for card removal
+	fmt.Print("Waiting for card release...")
+	err = waitUntilCardRelease(ctx, selectedReaders, index)
+	if err != nil {
+		s.notificationManager.NotifyError(fmt.Sprintf("Error waiting for card release: %v", err))
+	} else {
+		fmt.Println("Card released")
+	}
+
+	return nil
+}
+
+func (s *service) readCardUID(card *scard.Card) ([]byte, error) {
+	var uidBytes []byte
+	
+	err := s.retryManager.Retry(func() error {
+		// GET DATA command
+		cmd := []byte{0xFF, 0xCA, 0x00, 0x00, 0x00}
+
+		rsp, err := card.Transmit(cmd)
+		if err != nil {
+			return fmt.Errorf("card transmission failed: %v", err)
+		}
+
+		if len(rsp) < 2 {
+			return errors.New("insufficient response bytes from card")
+		}
+
+		// Check response code - two last bytes of response
+		rspCodeBytes := rsp[len(rsp)-2:]
+		successResponseCode := []byte{0x90, 0x00}
+		if !bytes.Equal(rspCodeBytes, successResponseCode) {
+			return fmt.Errorf("card operation failed, response code: % x", rspCodeBytes)
+		}
+
+		uidBytes = rsp[0 : len(rsp)-2]
+		return nil
+	})
+
+	return uidBytes, err
 }

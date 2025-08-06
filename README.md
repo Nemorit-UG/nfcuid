@@ -1,70 +1,214 @@
-# nfcUID
-Cross-platform terminal application for reading NFC tag UID and write it as keyboard output to text field in any application.
+# nfcUID - Enhanced Version
+Cross-platform terminal application for reading NFC tag UID with web browser integration and robust error handling.
 
 ## Overview
-Application read NFC tag UID using PC/SC API.
-PC/SC is a standard to interface computers with smartcards, available on most operating systems, including Windows, MacOS, Linux.
-UID writed in active text input field by generating keystrokes on the keyboard.
-So cursor should be in some text input field.
-UID output format options are available.
+Application reads NFC tag UID using PC/SC API and provides keyboard output to any text field. Features include:
+- **YAML Configuration**: Configure all settings via `config.yaml` file
+- **Web Browser Integration**: Automatically open URLs in maximized/fullscreen browser windows
+- **System Notifications**: User-friendly error handling with desktop notifications
+- **Robust Error Recovery**: Automatic reconnection and retry mechanisms
+- **Cross-platform Support**: Windows, MacOS, and Linux
+
+PC/SC is a standard interface for smartcards, available on most operating systems. UID is written to the active text input field by generating keystrokes.
+
+## New Features (Enhanced Version)
+
+### Configuration File Support
+- Create a `config.yaml` file for persistent settings
+- All command-line flags now available as YAML configuration
+- Command-line flags override config file settings when provided
+- Copy `config.yaml.example` to get started
+
+### Web Browser Integration
+- Automatically open websites when the application starts
+- Support for maximized and fullscreen browser windows
+- Cross-platform browser opening (Chrome, Firefox, Safari, Edge)
+- Perfect for kiosk applications or web-based card management systems
+
+### Enhanced Error Handling
+- **No more crashes**: Graceful error handling with system notifications
+- **Auto-reconnection**: Automatically reconnect when NFC readers disconnect
+- **Retry mechanisms**: Configurable retry attempts for failed card reads
+- **Desktop notifications**: Success and error notifications via system tray
+
+### Advanced Configuration Options
+- Configurable retry attempts and reconnection delays
+- Success/error notification preferences
+- Auto-reconnection toggle
+- Fullscreen browser mode selection
 
 ## Supported readers
-Application should work with any PC/SC compatible reader. It is tested with ACS readers:
+Application works with any PC/SC compatible reader. Tested with:
   - ACR122U
   - ACR1281U-C1
   - ACR1252U-M1
 
 ## Supported NFC tags
-Application should work with any NFC tag with UID. It is tested with NXP tags:
+Application works with any NFC tag with UID. Tested with:
   - Mifare Classic
   - Mifare Ultralight
-  - NTAG203
-  - NTAG213
-  - NTAG216
+  - NTAG203, NTAG213, NTAG216
 
-## Download
-Binaries for Windows, MacOS and Linux platforms could be downloaded from release page.
+## Installation & Build
 
-## Build
-Install the source code and build
-```golang
+### Download
+Binaries for Windows, MacOS and Linux platforms available from release page.
+
+### Build from source
+```bash
 go get github.com/taglme/nfcuid
+cd nfcuid
+go mod tidy
 go build
 ```
 
-## Output format
+## Configuration
 
-There are options for application that should be specified as flags.
+### YAML Configuration File
+Create `config.yaml` (copy from `config.yaml.example`):
 
- - '-device' (integer) - device number to use. Set to 0 if your want to select it manually or set to the desired device number to auto-select.
- - '-caps-lock' (boolean) -  UID output with caps lock
- - '-decimal' (boolean) - UID output in decimal format
- - '-reverse' (boolean) - UID output in reverse order
- - '-end-char' (string) - character at the end of UID. Options: 'hyphen', 'enter', 'semicolon', 'colon', 'comma', 'none', 'space', 'tab',  (default "none")
- - '-in-char' (string) - character between bytes of UID. Options: 'hyphen', 'enter', 'semicolon', 'colon', 'comma', 'none', 'space', 'tab',  (default "none")
+```yaml
+# NFC Reader Settings
+nfc:
+  device: 0              # 0 for manual selection
+  caps_lock: false       # Uppercase hex output
+  reverse: false         # Reverse UID byte order
+  decimal: false         # Decimal format instead of hex
+  end_char: "enter"      # Character after UID
+  in_char: "hyphen"      # Character between bytes
 
-Run with '-h' flag to check usage
+# Web Browser Integration
+web:
+  open_website: true                    # Open browser on startup
+  website_url: "https://example.com"    # URL to open
+  fullscreen: true                      # Fullscreen mode
+
+# System Notifications
+notifications:
+  enabled: true          # Enable notifications
+  show_success: true     # Notify on successful reads
+  show_errors: true      # Notify on errors
+
+# Advanced Settings
+advanced:
+  retry_attempts: 3      # Retry failed operations
+  reconnect_delay: 2     # Seconds between reconnection attempts
+  auto_reconnect: true   # Auto-reconnect on disconnection
 ```
+
+### Command-line Options
+All YAML options available as flags (override config file):
+
+```bash
+# NFC Options
+-device int            Device number (0 for manual selection)
+-caps-lock bool        UID with uppercase letters
+-reverse bool          Reverse UID byte order
+-decimal bool          Output in decimal format
+-end-char string       End character: none,space,tab,hyphen,enter,semicolon,colon,comma
+-in-char string        Between-bytes character (same options as end-char)
+
+# Web Options
+-open-website bool     Open browser on startup
+-website-url string    URL to open
+-fullscreen bool       Use fullscreen browser mode
+
+# Run with -h for complete help
 nfcuid -h
 ```
 
-## Examples
+## Usage Examples
 
-```golang
-//This will auto-select first available PC/SC device in system
-//Output will be in direct order 
-//Bytes of UID will be in hex format
-//Between bytes of UID will be hyphen ("-") printed
-//At end of UID newline will be printed
-nfcuid -end-char=enter -in-char=hyphen -caps-lock=false -reverse=false -decimal=false -device=1
+### Basic Usage
+```bash
+# Use config.yaml settings
+./nfcuid
 
-//Output 
-04-ae-65-ca-82-49-80
-
+# Override specific settings
+./nfcuid -device=1 -end-char=enter
 ```
+
+### Kiosk Mode Example
+```yaml
+# config.yaml for kiosk application
+nfc:
+  device: 1
+  end_char: "enter"
+web:
+  open_website: true
+  website_url: "https://your-kiosk-app.com/checkin"
+  fullscreen: true
+notifications:
+  show_success: false  # Quiet mode
+```
+
+### Development/Testing
+```yaml
+# config.yaml for development
+nfc:
+  device: 0           # Manual device selection
+  caps_lock: true
+  in_char: "hyphen"
+web:
+  open_website: true
+  website_url: "http://localhost:3000"
+  fullscreen: false
+advanced:
+  retry_attempts: 1   # Fail fast for debugging
+```
+
+### Output Examples
+```
+# Hex format with hyphens
+04-AE-65-CA-82-49-80
+
+# Decimal format
+310838458
+
+# Hex format, no separators
+04AE65CA824980
+```
+
+## Error Handling & Troubleshooting
+
+### System Notifications
+- **Success**: "Card UID: [uid-value]"
+- **Errors**: Specific error descriptions
+- **Connection**: Reader disconnect/reconnect status
+- **Browser**: Browser opening confirmation
+
+### Common Issues
+1. **No readers found**: Check USB connections, install drivers
+2. **Permission denied**: Run with appropriate permissions (especially Linux)
+3. **Browser won't open**: Check URL format, browser availability
+4. **Cards not reading**: Try different retry settings, check card compatibility
+
+### Logging & Debug
+- Console output shows detailed operation status
+- Notifications provide user-friendly error messages
+- Auto-recovery attempts logged with delays
+- Configuration validation on startup
+
+## Advanced Features
+
+### Auto-Recovery
+- Automatic reconnection when readers disconnect
+- Configurable retry attempts for failed operations
+- Exponential backoff for reconnection delays
+- Graceful fallback when errors occur
+
+### Cross-Platform Browser Support
+- **Windows**: Chrome/Edge kiosk mode, fallback to default
+- **macOS**: Chrome kiosk mode, Safari with AppleScript fullscreen
+- **Linux**: Chrome/Firefox kiosk mode, xdotool F11 fallback
+
+### Configuration Priority
+1. Command-line flags (highest priority)
+2. YAML configuration file
+3. Built-in defaults (lowest priority)
 
 ## Demo
 Short application [overview video](https://youtu.be/BSyxhg2iWfA) (in Russian) on Youtube
 
-## More NFC software
-More NFC software and services are available on [Tagl.me](https://tagl.me)
+## More NFC Software
+More NFC software and services available at [Tagl.me](https://tagl.me)

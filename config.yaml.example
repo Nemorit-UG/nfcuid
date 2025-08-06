@@ -1,0 +1,66 @@
+# NFC UID Reader Configuration
+# Copy this file to config.yaml and modify as needed
+
+# NFC Reader Settings
+nfc:
+  # Device number (0 for manual selection, or specific device number)
+  device: 0
+  
+  # Output formatting options
+  caps_lock: false     # UID output with uppercase letters
+  reverse: false       # Reverse the UID byte order
+  decimal: false       # Output UID in decimal format instead of hex
+  
+  # Character options: none, space, tab, hyphen, enter, semicolon, colon, comma
+  end_char: "none"     # Character to append at end of UID
+  in_char: "none"      # Character to insert between UID bytes
+
+# Web Browser Integration
+web:
+  # Whether to open a browser window when the application starts
+  open_website: false
+  
+  # URL to open in the browser
+  website_url: "https://example.com"
+  
+  # Try to open browser in fullscreen mode
+  fullscreen: true
+
+# System Notifications
+notifications:
+  # Enable system notifications
+  enabled: true
+  
+  # Show notifications for successful card reads
+  show_success: true
+  
+  # Show notifications for errors and issues
+  show_errors: true
+
+# Advanced Settings
+advanced:
+  # Number of times to retry failed card reads
+  retry_attempts: 3
+  
+  # Seconds to wait before attempting to reconnect after disconnection
+  reconnect_delay: 2
+  
+  # Automatically attempt to reconnect to readers when disconnected
+  auto_reconnect: true
+
+# Example configurations:
+# 
+# Kiosk mode with browser:
+# nfc:
+#   device: 1
+#   end_char: "enter"
+# web:
+#   open_website: true
+#   website_url: "https://your-kiosk-application.com"
+#   fullscreen: true
+#
+# Silent mode with minimal notifications:
+# notifications:
+#   enabled: true
+#   show_success: false
+#   show_errors: true
