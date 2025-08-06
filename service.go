@@ -58,7 +58,7 @@ func UIDToUint32(uid []byte) (uint32, error) {
 func (s *service) Start() {
 	for {
 		if err := s.runServiceLoop(); err != nil {
-			s.notificationManager.NotifyError(fmt.Sprintf("Service error: %v", err))
+			s.notificationManager.NotifyErrorThrottled("service-error", fmt.Sprintf("Service error: %v", err))
 			fmt.Printf("Service encountered an error: %v\n", err)
 			
 			if s.config.Advanced.AutoReconnect {
@@ -274,7 +274,7 @@ func (s *service) cardReadingLoop(ctx *scard.Context, selectedReaders []string, 
 		// Wait for card present with error handling
 		index, err := s.waitForCardWithRetry(ctx, selectedReaders)
 		if err != nil {
-			s.notificationManager.NotifyError(fmt.Sprintf("Card detection error: %v", err))
+			s.notificationManager.NotifyErrorThrottled("card-error", fmt.Sprintf("Card detection error: %v", err))
 			if s.config.Advanced.AutoReconnect {
 				continue
 			}
@@ -283,7 +283,7 @@ func (s *service) cardReadingLoop(ctx *scard.Context, selectedReaders []string, 
 
 		// Process the card
 		if err := s.processCard(ctx, selectedReaders, index, kb); err != nil {
-			s.notificationManager.NotifyError(fmt.Sprintf("Card processing error: %v", err))
+			s.notificationManager.NotifyErrorThrottled("card-error", fmt.Sprintf("Card processing error: %v", err))
 			fmt.Printf("Card processing failed: %v\n", err)
 			// Continue to next card instead of exiting
 			continue
@@ -336,7 +336,7 @@ func (s *service) processCard(ctx *scard.Context, selectedReaders []string, inde
 	fmt.Print("Writing as keyboard input...")
 	
 	if err := KeyboardWrite(output, kb); err != nil {
-		s.notificationManager.NotifyError(fmt.Sprintf("Keyboard write failed: %v", err))
+		s.notificationManager.NotifyErrorThrottled("keyboard-error", fmt.Sprintf("Keyboard write failed: %v", err))
 		return fmt.Errorf("failed to write keyboard output: %v", err)
 	}
 

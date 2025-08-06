@@ -30,10 +30,8 @@ func main() {
 		// Open browser window on startup
 		fmt.Printf("Opening browser: %s\n", config.Web.WebsiteURL)
 		if err := browserManager.OpenURL(config.Web.WebsiteURL); err != nil {
-			notificationManager.NotifyError(fmt.Sprintf("Failed to open browser: %v", err))
+			notificationManager.NotifyErrorThrottled("browser-error", fmt.Sprintf("Failed to open browser: %v", err))
 			fmt.Printf("Warning: Failed to open browser: %v\n", err)
-		} else {
-			notificationManager.NotifyInfo("NFC Reader", "Browser opened successfully")
 		}
 	}
 
@@ -44,7 +42,7 @@ func main() {
 	service := NewService(appFlags, config, notificationManager, restartManager)
 	
 	fmt.Println("Starting NFC card reader service...")
-	notificationManager.NotifyInfo("NFC Reader", "Service started - ready to read cards")
+	notificationManager.NotifyInfo("NFC Lesegerät", "Service gestartet - bereit zum Kartenlesen")
 	
 	service.Start()
 }

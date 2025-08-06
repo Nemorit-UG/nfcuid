@@ -117,6 +117,7 @@ func loadConfigFromFile(config *Config, filename string) error {
 // overrideWithFlags applies command-line flags over configuration file settings
 func overrideWithFlags(config *Config) {
 	var endChar, inChar string
+	var autoRestart bool
 	
 	// Define flags
 	flag.StringVar(&endChar, "end-char", config.NFC.EndChar, "Character at the end of UID. Options: "+CharFlagOptions())
@@ -128,9 +129,15 @@ func overrideWithFlags(config *Config) {
 	flag.BoolVar(&config.Web.OpenWebsite, "open-website", config.Web.OpenWebsite, "Open website URL in browser on startup")
 	flag.StringVar(&config.Web.WebsiteURL, "website-url", config.Web.WebsiteURL, "URL to open in browser")
 	flag.BoolVar(&config.Web.Fullscreen, "fullscreen", config.Web.Fullscreen, "Open browser in fullscreen mode")
+	flag.BoolVar(&autoRestart, "auto-restart", false, "Internal flag indicating automatic restart")
 	
 	// Parse flags
 	flag.Parse()
+	
+	// If this is an auto-restart, disable browser opening
+	if autoRestart {
+		config.Web.OpenWebsite = false
+	}
 	
 	// Apply character flags
 	if endChar != config.NFC.EndChar {

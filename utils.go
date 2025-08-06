@@ -6,50 +6,97 @@ import (
 	"os"
 	"os/exec"
 	"runtime"
+	"strings"
 	"time"
 
 	"github.com/gen2brain/beeep"
 	"github.com/skratchdot/open-golang/open"
 )
 
-// NotificationManager handles system notifications
+// NotificationManager handles system notifications with throttling
 type NotificationManager struct {
-	enabled     bool
-	showSuccess bool
-	showErrors  bool
+	enabled           bool
+	showSuccess       bool
+	showErrors        bool
+	lastNotifications map[string]time.Time  // Track last notification time per error type
+	errorCounts       map[string]int        // Track consecutive error counts per type
 }
 
 // NewNotificationManager creates a new notification manager
 func NewNotificationManager(config *Config) *NotificationManager {
 	return &NotificationManager{
-		enabled:     config.Notifications.Enabled,
-		showSuccess: config.Notifications.ShowSuccess,
-		showErrors:  config.Notifications.ShowErrors,
+		enabled:           config.Notifications.Enabled,
+		showSuccess:       config.Notifications.ShowSuccess,
+		showErrors:        config.Notifications.ShowErrors,
+		lastNotifications: make(map[string]time.Time),
+		errorCounts:       make(map[string]int),
 	}
 }
 
-// NotifySuccess sends a success notification
+// NotifySuccess sends a success notification (only when transitioning from error state)
 func (nm *NotificationManager) NotifySuccess(message string) {
 	if !nm.enabled || !nm.showSuccess {
 		return
 	}
 	
-	err := beeep.Notify("NFC Card Read Success", message, "")
-	if err != nil {
-		log.Printf("Failed to send success notification: %v", err)
+	// Only notify success if we had previous errors (recovering from error state)
+	if nm.hasRecentErrors() {
+		err := beeep.Notify("NFC Karten-Lesung erfolgreich", message, "")
+		if err != nil {
+			log.Printf("Failed to send success notification: %v", err)
+		}
+		
+		// Clear error counts on successful operation
+		nm.clearErrorCounts()
 	}
 }
 
-// NotifyError sends an error notification
+// NotifyError sends an error notification with smart throttling
 func (nm *NotificationManager) NotifyError(message string) {
 	if !nm.enabled || !nm.showErrors {
 		return
 	}
 	
-	err := beeep.Alert("NFC Reader Error", message, "")
-	if err != nil {
-		log.Printf("Failed to send error notification: %v", err)
+	errorType := nm.categorizeError(message)
+	
+	if nm.shouldNotifyError(errorType, message) {
+		title := "NFC Reader-Fehler"
+		if count := nm.errorCounts[errorType]; count > 1 {
+			title = fmt.Sprintf("NFC Reader-Fehler (x%d)", count)
+		}
+		
+		err := beeep.Alert(title, message, "")
+		if err != nil {
+			log.Printf("Failed to send error notification: %v", err)
+		}
+		
+		nm.lastNotifications[errorType] = time.Now()
 	}
+	
+	nm.errorCounts[errorType]++
+}
+
+// NotifyErrorThrottled sends throttled error notifications for system failures
+func (nm *NotificationManager) NotifyErrorThrottled(errorType, message string) {
+	if !nm.enabled || !nm.showErrors {
+		return
+	}
+	
+	if nm.shouldNotifyError(errorType, message) {
+		title := "NFC System-Fehler"
+		if count := nm.errorCounts[errorType]; count > 1 {
+			title = fmt.Sprintf("NFC System-Fehler (x%d)", count)
+		}
+		
+		err := beeep.Alert(title, message, "")
+		if err != nil {
+			log.Printf("Failed to send error notification: %v", err)
+		}
+		
+		nm.lastNotifications[errorType] = time.Now()
+	}
+	
+	nm.errorCounts[errorType]++
 }
 
 // NotifyInfo sends an informational notification
@@ -273,11 +320,11 @@ func (rm *RestartManager) ResetFailureCount() {
 
 // performSelfRestart performs the actual application restart
 func (rm *RestartManager) performSelfRestart(operation string) {
-	message := fmt.Sprintf("Maximum PC/SC %s failures reached (%d). Restarting application...", operation, rm.config.Advanced.MaxContextFailures)
+	message := fmt.Sprintf("Maximale PC/SC %s Fehler erreicht (%d). Anwendung wird neu gestartet...", operation, rm.config.Advanced.MaxContextFailures)
 	fmt.Println(message)
 	
 	if rm.notificationManager != nil {
-		rm.notificationManager.NotifyInfo("NFC Reader", message)
+		rm.notificationManager.NotifyInfo("NFC Lesegerät", message)
 	}
 	
 	// Give time for notifications to be displayed
@@ -296,8 +343,9 @@ func (rm *RestartManager) performSelfRestart(operation string) {
 		return
 	}
 	
-	// Get original arguments (excluding the program name)
+	// Get original arguments (excluding the program name) and add restart flag
 	args := os.Args[1:]
+	args = append(args, "--auto-restart")
 	
 	fmt.Printf("Restarting application: %s %v\n", executable, args)
 	
@@ -320,9 +368,99 @@ func (rm *RestartManager) performSelfRestart(operation string) {
 	
 	// Notify about successful restart initiation
 	if rm.notificationManager != nil {
-		rm.notificationManager.NotifyInfo("NFC Reader", "Application restart initiated successfully")
+		rm.notificationManager.NotifyInfo("NFC Lesegerät", "Anwendungsneustart erfolgreich eingeleitet")
 	}
 	
 	fmt.Println("New process started successfully. Exiting current instance.")
 	os.Exit(0)
+}
+// categorizeError categorizes error messages into types for throttling
+func (nm *NotificationManager) categorizeError(message string) string {
+	switch {
+	case strings.Contains(message, "PC/SC Context"):
+		return "pc-sc-context"
+	case strings.Contains(message, "Reader"):
+		return "reader-error"
+	case strings.Contains(message, "Card"):
+		return "card-error"  
+	case strings.Contains(message, "Keyboard"):
+		return "keyboard-error"
+	case strings.Contains(message, "Browser"):
+		return "browser-error"
+	case strings.Contains(message, "Service"):
+		return "service-error"
+	default:
+		return "general-error"
+	}
+}
+
+// shouldNotifyError determines if an error notification should be sent based on throttling rules
+func (nm *NotificationManager) shouldNotifyError(errorType, message string) bool {
+	now := time.Now()
+	
+	// Always notify first occurrence of any error type
+	lastNotification, exists := nm.lastNotifications[errorType]
+	if !exists {
+		return true
+	}
+	
+	// Get error count for this type
+	count := nm.errorCounts[errorType]
+	
+	// Throttling rules based on error count and type
+	switch errorType {
+	case "pc-sc-context", "reader-error":
+		// Critical system errors: notify on 1st, 3rd, 5th, then every 10th
+		if count == 0 || count == 2 || count == 4 {
+			return true
+		}
+		if count >= 10 && count%10 == 0 {
+			return true
+		}
+		// Also notify if it's been more than 5 minutes since last notification
+		if now.Sub(lastNotification) > 5*time.Minute {
+			return true
+		}
+	case "card-error":
+		// Card errors: notify on 1st, then every 5th, or after 2 minutes
+		if count == 0 || count%5 == 0 {
+			return true
+		}
+		if now.Sub(lastNotification) > 2*time.Minute {
+			return true
+		}
+	case "service-error":
+		// Service errors: notify on 1st, 2nd, then every 5th
+		if count <= 1 || count%5 == 0 {
+			return true
+		}
+		if now.Sub(lastNotification) > 3*time.Minute {
+			return true
+		}
+	default:
+		// Other errors: notify on 1st, then every 3rd, or after 1 minute
+		if count == 0 || count%3 == 0 {
+			return true
+		}
+		if now.Sub(lastNotification) > 1*time.Minute {
+			return true
+		}
+	}
+	
+	return false
+}
+
+// hasRecentErrors checks if there were any recent errors (for success notification logic)
+func (nm *NotificationManager) hasRecentErrors() bool {
+	for _, count := range nm.errorCounts {
+		if count > 0 {
+			return true
+		}
+	}
+	return false
+}
+
+// clearErrorCounts resets all error counters (called on successful operation)
+func (nm *NotificationManager) clearErrorCounts() {
+	nm.errorCounts = make(map[string]int)
 }
