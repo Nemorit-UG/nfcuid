@@ -19,6 +19,9 @@ func main() {
 	// Initialize notification manager
 	notificationManager := NewNotificationManager(config)
 	
+	// Initialize audio manager
+	audioManager := NewAudioManager(config)
+	
 	// Initialize restart manager
 	restartManager := NewRestartManager(config, notificationManager)
 	
@@ -39,7 +42,7 @@ func main() {
 	appFlags := config.ToFlags()
 
 	// Initialize and start the NFC service
-	service := NewService(appFlags, config, notificationManager, restartManager)
+	service := NewService(appFlags, config, notificationManager, restartManager, audioManager)
 	
 	fmt.Println("Starting NFC card reader service...")
 	notificationManager.NotifyInfo("NFC Lesegerät", "Service gestartet - bereit zum Kartenlesen")

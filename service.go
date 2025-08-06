@@ -12,8 +12,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/micmonay/keybd_event"
 	"github.com/ebfe/scard"
+	"github.com/micmonay/keybd_event"
 )
 
 type Service interface {
@@ -21,12 +21,13 @@ type Service interface {
 	Flags() Flags
 }
 
-func NewService(flags Flags, config *Config, notificationManager *NotificationManager, restartManager *RestartManager) Service {
+func NewService(flags Flags, config *Config, notificationManager *NotificationManager, restartManager *RestartManager, audioManager *AudioManager) Service {
 	return &service{
 		flags:               flags,
 		config:              config,
 		notificationManager: notificationManager,
 		restartManager:      restartManager,
+		audioManager:        audioManager,
 		retryManager:        NewRetryManager(config.Advanced.RetryAttempts, config.Advanced.ReconnectDelay),
 	}
 }
@@ -45,6 +46,7 @@ type service struct {
 	config              *Config
 	notificationManager *NotificationManager
 	restartManager      *RestartManager
+	audioManager        *AudioManager
 	retryManager        *RetryManager
 }
 
@@ -337,11 +339,13 @@ func (s *service) processCard(ctx *scard.Context, selectedReaders []string, inde
 	
 	if err := KeyboardWrite(output, kb); err != nil {
 		s.notificationManager.NotifyErrorThrottled("keyboard-error", "Karten-ID konnte nicht eingegeben werden. Cursor im richtigen Feld?")
+		s.audioManager.PlayErrorSound()
 		return fmt.Errorf("failed to write keyboard output: %v", err)
 	}
 
 	fmt.Println("Success!")
 	s.notificationManager.NotifySuccess(fmt.Sprintf("Card UID: %s", output))
+	s.audioManager.PlaySuccessSound()
 
 	// Wait for card removal
 	fmt.Print("Waiting for card release...")

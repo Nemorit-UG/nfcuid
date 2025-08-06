@@ -464,3 +464,139 @@ func (nm *NotificationManager) hasRecentErrors() bool {
 func (nm *NotificationManager) clearErrorCounts() {
 	nm.errorCounts = make(map[string]int)
 }
+// AudioManager handles audio feedback for successful scans and errors
+type AudioManager struct {
+	enabled        bool
+	successSound   string
+	errorSound     string
+	volume         int
+}
+
+// NewAudioManager creates a new audio manager
+func NewAudioManager(config *Config) *AudioManager {
+	return &AudioManager{
+		enabled:      config.Audio.Enabled,
+		successSound: config.Audio.SuccessSound,
+		errorSound:   config.Audio.ErrorSound,
+		volume:       config.Audio.Volume,
+	}
+}
+
+// PlaySuccessSound plays the configured success sound
+func (am *AudioManager) PlaySuccessSound() {
+	if !am.enabled {
+		return
+	}
+	
+	go am.playSound(am.successSound)
+}
+
+// PlayErrorSound plays the configured error sound
+func (am *AudioManager) PlayErrorSound() {
+	if !am.enabled {
+		return
+	}
+	
+	go am.playSound(am.errorSound)
+}
+
+// playSound plays the specified sound
+func (am *AudioManager) playSound(soundType string) {
+	switch soundType {
+	case "beep":
+		am.playSystemBeep()
+	case "error":
+		am.playSystemError()
+	case "none", "":
+		// No sound
+		return
+	default:
+		// Assume it's a file path
+		am.playAudioFile(soundType)
+	}
+}
+
+// playSystemBeep plays a system beep sound
+func (am *AudioManager) playSystemBeep() {
+	switch runtime.GOOS {
+	case "windows":
+		// Windows system beep
+		exec.Command("cmd", "/c", "echo", "\a").Run()
+	case "darwin":
+		// macOS system beep
+		exec.Command("afplay", "/System/Library/Sounds/Ping.aiff").Run()
+	case "linux":
+		// Linux system beep - try multiple methods
+		if exec.Command("pactl", "list", "short", "modules").Run() == nil {
+			// PulseAudio available
+			exec.Command("pactl", "upload-sample", "/usr/share/sounds/freedesktop/stereo/complete.oga", "beep").Run()
+			exec.Command("pactl", "play-sample", "beep").Run()
+		} else if exec.Command("which", "beep").Run() == nil {
+			// beep command available
+			exec.Command("beep", "-f", "800", "-l", "200").Run()
+		} else {
+			// Fallback to terminal bell
+			fmt.Print("\a")
+		}
+	default:
+		// Fallback to terminal bell
+		fmt.Print("\a")
+	}
+}
+
+// playSystemError plays a system error sound
+func (am *AudioManager) playSystemError() {
+	switch runtime.GOOS {
+	case "windows":
+		// Windows error sound
+		exec.Command("rundll32", "user32.dll,MessageBeep", "16").Run()
+	case "darwin":
+		// macOS error sound
+		exec.Command("afplay", "/System/Library/Sounds/Sosumi.aiff").Run()
+	case "linux":
+		// Linux error sound - lower pitch beeps
+		if exec.Command("which", "beep").Run() == nil {
+			exec.Command("beep", "-f", "300", "-l", "500").Run()
+		} else {
+			// Multiple terminal bells for error
+			fmt.Print("\a\a")
+		}
+	default:
+		// Fallback to double terminal bell
+		fmt.Print("\a\a")
+	}
+}
+
+// playAudioFile plays an audio file from the specified path
+func (am *AudioManager) playAudioFile(filePath string) {
+	// Check if file exists
+	if _, err := os.Stat(filePath); os.IsNotExist(err) {
+		log.Printf("Audio file not found: %s", filePath)
+		return
+	}
+
+	switch runtime.GOOS {
+	case "windows":
+		// Windows - use built-in media player
+		exec.Command("cmd", "/c", "start", "/min", "wmplayer", "/close", filePath).Run()
+	case "darwin":
+		// macOS - use afplay
+		exec.Command("afplay", filePath).Run()
+	case "linux":
+		// Linux - try multiple audio players
+		players := []string{"paplay", "aplay", "mpg123", "sox", "ffplay"}
+		for _, player := range players {
+			if exec.Command("which", player).Run() == nil {
+				if player == "ffplay" {
+					exec.Command(player, "-nodisp", "-autoexit", filePath).Run()
+				} else {
+					exec.Command(player, filePath).Run()
+				}
+				return
+			}
+		}
+		log.Printf("No audio player found to play: %s", filePath)
+	default:
+		log.Printf("Audio file playback not supported on this platform: %s", filePath)
+	}
+}
