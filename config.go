@@ -31,9 +31,12 @@ type Config struct {
 		ShowErrors  bool `yaml:"show_errors"`
 	} `yaml:"notifications"`
 	Advanced struct {
-		RetryAttempts  int `yaml:"retry_attempts"`
-		ReconnectDelay int `yaml:"reconnect_delay"`
-		AutoReconnect  bool `yaml:"auto_reconnect"`
+		RetryAttempts      int  `yaml:"retry_attempts"`
+		ReconnectDelay     int  `yaml:"reconnect_delay"`
+		AutoReconnect      bool `yaml:"auto_reconnect"`
+		SelfRestart        bool `yaml:"self_restart"`
+		MaxContextFailures int  `yaml:"max_context_failures"`
+		RestartDelay       int  `yaml:"restart_delay"`
 	} `yaml:"advanced"`
 }
 
@@ -63,6 +66,9 @@ func DefaultConfig() *Config {
 	config.Advanced.RetryAttempts = 3
 	config.Advanced.ReconnectDelay = 2
 	config.Advanced.AutoReconnect = true
+	config.Advanced.SelfRestart = true
+	config.Advanced.MaxContextFailures = 5
+	config.Advanced.RestartDelay = 10
 	
 	return config
 }
@@ -159,6 +165,15 @@ func validateConfig(config *Config) error {
 	// Validate reconnect delay
 	if config.Advanced.ReconnectDelay < 0 {
 		return fmt.Errorf("reconnect delay must be non-negative, got: %d", config.Advanced.ReconnectDelay)
+	}
+	
+	// Validate self-restart settings
+	if config.Advanced.MaxContextFailures < 1 {
+		return fmt.Errorf("max context failures must be at least 1, got: %d", config.Advanced.MaxContextFailures)
+	}
+	
+	if config.Advanced.RestartDelay < 0 {
+		return fmt.Errorf("restart delay must be non-negative, got: %d", config.Advanced.RestartDelay)
 	}
 	
 	return nil

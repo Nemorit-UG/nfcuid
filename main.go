@@ -19,6 +19,9 @@ func main() {
 	// Initialize notification manager
 	notificationManager := NewNotificationManager(config)
 	
+	// Initialize restart manager
+	restartManager := NewRestartManager(config, notificationManager)
+	
 	// Initialize browser manager
 	var browserManager *BrowserManager
 	if config.Web.OpenWebsite {
@@ -38,7 +41,7 @@ func main() {
 	appFlags := config.ToFlags()
 
 	// Initialize and start the NFC service
-	service := NewService(appFlags, config, notificationManager)
+	service := NewService(appFlags, config, notificationManager, restartManager)
 	
 	fmt.Println("Starting NFC card reader service...")
 	notificationManager.NotifyInfo("NFC Reader", "Service started - ready to read cards")

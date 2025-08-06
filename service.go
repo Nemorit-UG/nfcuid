@@ -21,11 +21,12 @@ type Service interface {
 	Flags() Flags
 }
 
-func NewService(flags Flags, config *Config, notificationManager *NotificationManager) Service {
+func NewService(flags Flags, config *Config, notificationManager *NotificationManager, restartManager *RestartManager) Service {
 	return &service{
 		flags:               flags,
 		config:              config,
 		notificationManager: notificationManager,
+		restartManager:      restartManager,
 		retryManager:        NewRetryManager(config.Advanced.RetryAttempts, config.Advanced.ReconnectDelay),
 	}
 }
@@ -43,6 +44,7 @@ type service struct {
 	flags               Flags
 	config              *Config
 	notificationManager *NotificationManager
+	restartManager      *RestartManager
 	retryManager        *RetryManager
 }
 
@@ -76,16 +78,31 @@ func (s *service) runServiceLoop() error {
 	err := s.retryManager.Retry(func() error {
 		var err error
 		ctx, err = scard.EstablishContext()
+		if err != nil {
+			// Track context establishment failure
+			if s.restartManager.TrackContextFailure(err) {
+				// Restart was triggered, this will never return
+				return nil
+			}
+		}
 		return err
 	})
 	if err != nil {
 		return fmt.Errorf("failed to establish PC/SC context: %v", err)
 	}
+	
+	// Context established successfully, reset failure counter
+	s.restartManager.ResetFailureCount()
 	defer ctx.Release()
 
 	// List available readers
 	readers, err := ctx.ListReaders()
 	if err != nil {
+		// Track reader enumeration failure
+		if s.restartManager.TrackSystemFailure("Reader Enumeration", err) {
+			// Restart was triggered, this will never return
+			return nil
+		}
 		return fmt.Errorf("failed to list readers: %v", err)
 	}
 
@@ -166,7 +183,7 @@ func (s *service) formatOutput(rx []byte) string {
 	return output
 }
 
-func waitUntilCardPresent(ctx *scard.Context, readers []string) (int, error) {
+func (s *service) waitUntilCardPresent(ctx *scard.Context, readers []string) (int, error) {
 	rs := make([]scard.ReaderState, len(readers))
 	for i := range rs {
 		rs[i].Reader = readers[i]
@@ -182,12 +199,17 @@ func waitUntilCardPresent(ctx *scard.Context, readers []string) (int, error) {
 		}
 		err := ctx.GetStatusChange(rs, -1)
 		if err != nil {
+			// Track reader status monitoring failure
+			if s.restartManager.TrackSystemFailure("Reader Status Monitoring", err) {
+				// Restart was triggered, this will never return
+				return -1, nil
+			}
 			return -1, err
 		}
 	}
 }
 
-func waitUntilCardRelease(ctx *scard.Context, readers []string, index int) error {
+func (s *service) waitUntilCardRelease(ctx *scard.Context, readers []string, index int) error {
 	rs := make([]scard.ReaderState, 1)
 
 	rs[0].Reader = readers[index]
@@ -202,6 +224,11 @@ func waitUntilCardRelease(ctx *scard.Context, readers []string, index int) error
 
 		err := ctx.GetStatusChange(rs, -1)
 		if err != nil {
+			// Track reader status monitoring failure
+			if s.restartManager.TrackSystemFailure("Reader Status Monitoring", err) {
+				// Restart was triggered, this will never return
+				return nil
+			}
 			return err
 		}
 	}
@@ -268,7 +295,7 @@ func (s *service) waitForCardWithRetry(ctx *scard.Context, readers []string) (in
 	var index int
 	err := s.retryManager.Retry(func() error {
 		var err error
-		index, err = waitUntilCardPresent(ctx, readers)
+		index, err = s.waitUntilCardPresent(ctx, readers)
 		return err
 	})
 	return index, err
@@ -282,6 +309,13 @@ func (s *service) processCard(ctx *scard.Context, selectedReaders []string, inde
 	err := s.retryManager.Retry(func() error {
 		var err error
 		card, err = ctx.Connect(selectedReaders[index], scard.ShareShared, scard.ProtocolAny)
+		if err != nil {
+			// Track reader connection failure
+			if s.restartManager.TrackSystemFailure("Reader Connection", err) {
+				// Restart was triggered, this will never return
+				return nil
+			}
+		}
 		return err
 	})
 	if err != nil {
@@ -311,7 +345,7 @@ func (s *service) processCard(ctx *scard.Context, selectedReaders []string, inde
 
 	// Wait for card removal
 	fmt.Print("Waiting for card release...")
-	err = waitUntilCardRelease(ctx, selectedReaders, index)
+	err = s.waitUntilCardRelease(ctx, selectedReaders, index)
 	if err != nil {
 		s.notificationManager.NotifyError(fmt.Sprintf("Error waiting for card release: %v", err))
 	} else {

@@ -91,9 +91,12 @@ notifications:
 
 # Advanced Settings
 advanced:
-  retry_attempts: 3      # Retry failed operations
-  reconnect_delay: 2     # Seconds between reconnection attempts
-  auto_reconnect: true   # Auto-reconnect on disconnection
+  retry_attempts: 3           # Retry failed operations
+  reconnect_delay: 2          # Seconds between reconnection attempts
+  auto_reconnect: true        # Auto-reconnect on disconnection
+  self_restart: true          # Enable self-restart on critical failures
+  max_context_failures: 5     # Max PC/SC context failures before restart
+  restart_delay: 10           # Seconds to wait before restarting
 ```
 
 ### Command-line Options
@@ -196,6 +199,22 @@ advanced:
 - Configurable retry attempts for failed operations
 - Exponential backoff for reconnection delays
 - Graceful fallback when errors occur
+
+### Self-Restart Mechanism
+- **Automatic restart** on critical PC/SC context failures (default: after 5 consecutive failures)
+- **Configurable threshold** via `max_context_failures` setting
+- **Graceful restart** with notification and configurable delay
+- **Process preservation** with same command-line arguments
+- **Perfect for kiosk/service environments** where human intervention isn't available
+- **Failure tracking** resets on successful context establishment
+
+The self-restart feature monitors PC/SC context establishment failures. When `scard.EstablishContext()` fails consecutively for the configured number of times (default: 5), the application will:
+1. Display notification about restart
+2. Wait for configured delay (default: 10 seconds)
+3. Launch new process with same arguments
+4. Exit current process gracefully
+
+This ensures maximum uptime in unattended environments.
 
 ### Cross-Platform Browser Support
 - **Windows**: Chrome/Edge kiosk mode, fallback to default

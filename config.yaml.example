@@ -47,6 +47,11 @@ advanced:
   
   # Automatically attempt to reconnect to readers when disconnected
   auto_reconnect: true
+  
+  # Self-restart mechanism for critical failures
+  self_restart: true              # Enable automatic application restart
+  max_context_failures: 5        # Max consecutive PC/SC context failures before restart
+  restart_delay: 10               # Seconds to wait before restarting
 
 # Example configurations:
 # 

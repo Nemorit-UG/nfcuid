@@ -222,3 +222,107 @@ func SafeExit(code int, message string, notificationManager *NotificationManager
 	}
 	os.Exit(code)
 }
+// RestartManager handles application self-restart functionality
+type RestartManager struct {
+	config              *Config
+	notificationManager *NotificationManager
+	contextFailureCount int
+}
+
+// NewRestartManager creates a new restart manager
+func NewRestartManager(config *Config, notificationManager *NotificationManager) *RestartManager {
+	return &RestartManager{
+		config:              config,
+		notificationManager: notificationManager,
+		contextFailureCount: 0,
+	}
+}
+
+// TrackContextFailure increments the context failure counter and triggers restart if threshold reached
+func (rm *RestartManager) TrackContextFailure(err error) bool {
+	return rm.trackSystemFailure("PC/SC Context", err)
+}
+
+// TrackSystemFailure increments the system failure counter and triggers restart if threshold reached
+// Use this for any PC/SC system-level errors (readers, connections, system operations)
+func (rm *RestartManager) TrackSystemFailure(operation string, err error) bool {
+	return rm.trackSystemFailure(operation, err)
+}
+
+// trackSystemFailure is the internal implementation for tracking any PC/SC system failure
+func (rm *RestartManager) trackSystemFailure(operation string, err error) bool {
+	rm.contextFailureCount++
+	
+	fmt.Printf("PC/SC %s failure %d/%d: %v\n", operation, rm.contextFailureCount, rm.config.Advanced.MaxContextFailures, err)
+	
+	if rm.config.Advanced.SelfRestart && rm.contextFailureCount >= rm.config.Advanced.MaxContextFailures {
+		rm.performSelfRestart(operation)
+		return true // This will never actually return due to restart, but for clarity
+	}
+	
+	return false
+}
+
+// ResetFailureCount resets the context failure counter (called on successful context establishment)
+func (rm *RestartManager) ResetFailureCount() {
+	if rm.contextFailureCount > 0 {
+		fmt.Printf("PC/SC Context established successfully, resetting failure count\n")
+		rm.contextFailureCount = 0
+	}
+}
+
+// performSelfRestart performs the actual application restart
+func (rm *RestartManager) performSelfRestart(operation string) {
+	message := fmt.Sprintf("Maximum PC/SC %s failures reached (%d). Restarting application...", operation, rm.config.Advanced.MaxContextFailures)
+	fmt.Println(message)
+	
+	if rm.notificationManager != nil {
+		rm.notificationManager.NotifyInfo("NFC Reader", message)
+	}
+	
+	// Give time for notifications to be displayed
+	time.Sleep(2 * time.Second)
+	
+	if rm.config.Advanced.RestartDelay > 0 {
+		fmt.Printf("Waiting %d seconds before restart...\n", rm.config.Advanced.RestartDelay)
+		time.Sleep(time.Duration(rm.config.Advanced.RestartDelay) * time.Second)
+	}
+	
+	// Get the current executable path and arguments
+	executable, err := os.Executable()
+	if err != nil {
+		fmt.Printf("Failed to get executable path for restart: %v\n", err)
+		SafeExit(1, "Cannot restart application", rm.notificationManager)
+		return
+	}
+	
+	// Get original arguments (excluding the program name)
+	args := os.Args[1:]
+	
+	fmt.Printf("Restarting application: %s %v\n", executable, args)
+	
+	// Start new process
+	cmd := exec.Command(executable, args...)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	cmd.Stdin = os.Stdin
+	
+	err = cmd.Start()
+	if err != nil {
+		errorMsg := fmt.Sprintf("Failed to restart application: %v", err)
+		fmt.Println(errorMsg)
+		if rm.notificationManager != nil {
+			rm.notificationManager.NotifyError(errorMsg)
+		}
+		SafeExit(1, "Restart failed", rm.notificationManager)
+		return
+	}
+	
+	// Notify about successful restart initiation
+	if rm.notificationManager != nil {
+		rm.notificationManager.NotifyInfo("NFC Reader", "Application restart initiated successfully")
+	}
+	
+	fmt.Println("New process started successfully. Exiting current instance.")
+	os.Exit(0)
+}
