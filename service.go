@@ -58,7 +58,7 @@ func UIDToUint32(uid []byte) (uint32, error) {
 func (s *service) Start() {
 	for {
 		if err := s.runServiceLoop(); err != nil {
-			s.notificationManager.NotifyErrorThrottled("service-error", fmt.Sprintf("Service error: %v", err))
+			s.notificationManager.NotifyErrorThrottled("service-error", "Verbindung zum NFC-Lesegerät verloren. Bitte Gerät überprüfen.")
 			fmt.Printf("Service encountered an error: %v\n", err)
 			
 			if s.config.Advanced.AutoReconnect {
@@ -107,7 +107,7 @@ func (s *service) runServiceLoop() error {
 	}
 
 	if len(readers) < 1 {
-		return errors.New("no NFC readers found. Please connect a device and restart")
+		return errors.New("Kein NFC-Lesegerät gefunden. Bitte Gerät anschließen und Anwendung neu starten.")
 	}
 
 	fmt.Printf("Found %d device(s):\n", len(readers))
@@ -155,7 +155,7 @@ func (s *service) formatOutput(rx []byte) string {
 	if s.flags.Decimal {
 		number, err := UIDToUint32(rx)
 		if err != nil {
-			s.notificationManager.NotifyError(fmt.Sprintf("Failed to convert UID to decimal: %v", err))
+			s.notificationManager.NotifyError("Fehler beim Umwandeln der Karten-ID. Verwende Standard-Format.")
 			// Fallback to hex format
 			s.flags.Decimal = false
 		} else {
@@ -274,7 +274,7 @@ func (s *service) cardReadingLoop(ctx *scard.Context, selectedReaders []string, 
 		// Wait for card present with error handling
 		index, err := s.waitForCardWithRetry(ctx, selectedReaders)
 		if err != nil {
-			s.notificationManager.NotifyErrorThrottled("card-error", fmt.Sprintf("Card detection error: %v", err))
+			s.notificationManager.NotifyErrorThrottled("card-error", "Karte konnte nicht erkannt werden. Bitte NFC-Lesegerät überprüfen.")
 			if s.config.Advanced.AutoReconnect {
 				continue
 			}
@@ -283,7 +283,7 @@ func (s *service) cardReadingLoop(ctx *scard.Context, selectedReaders []string, 
 
 		// Process the card
 		if err := s.processCard(ctx, selectedReaders, index, kb); err != nil {
-			s.notificationManager.NotifyErrorThrottled("card-error", fmt.Sprintf("Card processing error: %v", err))
+			s.notificationManager.NotifyErrorThrottled("card-error", "Karte konnte nicht gelesen werden. Bitte erneut versuchen.")
 			fmt.Printf("Card processing failed: %v\n", err)
 			// Continue to next card instead of exiting
 			continue
@@ -336,7 +336,7 @@ func (s *service) processCard(ctx *scard.Context, selectedReaders []string, inde
 	fmt.Print("Writing as keyboard input...")
 	
 	if err := KeyboardWrite(output, kb); err != nil {
-		s.notificationManager.NotifyErrorThrottled("keyboard-error", fmt.Sprintf("Keyboard write failed: %v", err))
+		s.notificationManager.NotifyErrorThrottled("keyboard-error", "Karten-ID konnte nicht eingegeben werden. Cursor im richtigen Feld?")
 		return fmt.Errorf("failed to write keyboard output: %v", err)
 	}
 
@@ -347,7 +347,7 @@ func (s *service) processCard(ctx *scard.Context, selectedReaders []string, inde
 	fmt.Print("Waiting for card release...")
 	err = s.waitUntilCardRelease(ctx, selectedReaders, index)
 	if err != nil {
-		s.notificationManager.NotifyError(fmt.Sprintf("Error waiting for card release: %v", err))
+		s.notificationManager.NotifyError("Fehler beim Warten auf Karten-Entfernung. Karte wurde trotzdem gelesen.")
 	} else {
 		fmt.Println("Card released")
 	}
