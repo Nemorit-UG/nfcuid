@@ -51,6 +51,19 @@ advanced:
   max_context_failures: 5        # Max consecutive PC/SC context failures before restart
   restart_delay: 10               # Seconds to wait before restarting
 
+audio:
+  # Enable audio feedback for successful scans and errors
+  enabled: true
+  
+  # Success sound options: "beep", "none", or path to custom sound file
+  success_sound: "beep"
+  
+  # Error sound options: "error", "none", or path to custom sound file
+  error_sound: "error"
+  
+  # Volume level (0-100, currently not implemented but reserved for future use)
+  volume: 70
+
 # Example configurations:
 # 
 # Kiosk mode with browser:

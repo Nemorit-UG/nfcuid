@@ -30,6 +30,12 @@ type Config struct {
 		ShowSuccess bool `yaml:"show_success"`
 		ShowErrors  bool `yaml:"show_errors"`
 	} `yaml:"notifications"`
+	Audio struct {
+		Enabled        bool   `yaml:"enabled"`
+		SuccessSound   string `yaml:"success_sound"`
+		ErrorSound     string `yaml:"error_sound"`
+		Volume         int    `yaml:"volume"`
+	} `yaml:"audio"`
 	Advanced struct {
 		RetryAttempts      int  `yaml:"retry_attempts"`
 		ReconnectDelay     int  `yaml:"reconnect_delay"`
@@ -69,6 +75,12 @@ func DefaultConfig() *Config {
 	config.Advanced.SelfRestart = true
 	config.Advanced.MaxContextFailures = 5
 	config.Advanced.RestartDelay = 10
+	
+	// Audio defaults
+	config.Audio.Enabled = true
+	config.Audio.SuccessSound = "beep"     // Built-in beep sound
+	config.Audio.ErrorSound = "error"     // Built-in error sound
+	config.Audio.Volume = 70               // 70% volume
 	
 	return config
 }
