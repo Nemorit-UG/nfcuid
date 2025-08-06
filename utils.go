@@ -11,6 +11,7 @@ import (
 
 	"github.com/gen2brain/beeep"
 	"github.com/skratchdot/open-golang/open"
+	mp3 "github.com/hajimehoshi/go-mp3"
 )
 
 // NotificationManager handles system notifications with throttling
@@ -521,7 +522,7 @@ func (am *AudioManager) playSystemBeep() {
 	switch runtime.GOOS {
 	case "windows":
 		// Windows system beep
-		exec.Command("cmd", "/c", "echo", "\a").Run()
+		exec.Command("rundll32", "user32.dll,MessageBeep", "64").Run()
 	case "darwin":
 		// macOS system beep
 		exec.Command("afplay", "/System/Library/Sounds/Ping.aiff").Run()
@@ -575,16 +576,57 @@ func (am *AudioManager) playAudioFile(filePath string) {
 		return
 	}
 
+	// Check if it's an MP3 file - use go-mp3 for validation
+	if strings.HasSuffix(strings.ToLower(filePath), ".mp3") {
+		am.playMP3File(filePath)
+		return
+	}
+
+	// For other file types, use system players directly
+	am.playWithSystemPlayer(filePath)
+}
+
+// playMP3File plays an MP3 file using go-mp3 library
+func (am *AudioManager) playMP3File(filePath string) {
+	f, err := os.Open(filePath)
+	if err != nil {
+		log.Printf("Failed to open MP3 file %s: %v", filePath, err)
+		return
+	}
+	defer f.Close()
+
+	// Verify it's a valid MP3 file
+	_, err = mp3.NewDecoder(f)
+	if err != nil {
+		log.Printf("Failed to create MP3 decoder for %s: %v", filePath, err)
+		// Fall back to system player
+		am.playWithSystemPlayer(filePath)
+		return
+	}
+
+	// Use system player for actual playback since oto has dependency issues
+	am.playWithSystemPlayer(filePath)
+}
+
+// playWithSystemPlayer plays audio files using system players
+func (am *AudioManager) playWithSystemPlayer(filePath string) {
 	switch runtime.GOOS {
 	case "windows":
-		// Windows - use built-in media player
-		exec.Command("cmd", "/c", "start", "/min", "wmplayer", "/close", filePath).Run()
+		// On Windows, use PowerShell with MediaPlayer
+		cmd := exec.Command("powershell", "-c", fmt.Sprintf(`
+			Add-Type -AssemblyName presentationCore
+			$mediaPlayer = New-Object system.windows.media.mediaplayer
+			$mediaPlayer.open('%s')
+			$mediaPlayer.Play()
+			Start-Sleep -Seconds 2
+		`, filePath))
+		cmd.Run()
 	case "darwin":
 		// macOS - use afplay
 		exec.Command("afplay", filePath).Run()
 	case "linux":
 		// Linux - try multiple audio players
-		players := []string{"paplay", "aplay", "mpg123", "sox", "ffplay"}
+		players := []string{"mpg123", "ffplay", "paplay", "aplay"}
 		for _, player := range players {
 			if exec.Command("which", player).Run() == nil {
 				if player == "ffplay" {
@@ -595,7 +637,7 @@ func (am *AudioManager) playAudioFile(filePath string) {
 				return
 			}
 		}
-		log.Printf("No audio player found to play: %s", filePath)
+		log.Printf("No audio player found for: %s", filePath)
 	default:
 		log.Printf("Audio file playback not supported on this platform: %s", filePath)
 	}

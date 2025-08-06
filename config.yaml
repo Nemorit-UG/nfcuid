@@ -56,7 +56,7 @@ audio:
   enabled: true
   
   # Success sound options: "beep", "none", or path to custom sound file
-  success_sound: "beep"
+  success_sound: "path/to/sound.mp3"
   
   # Error sound options: "error", "none", or path to custom sound file
   error_sound: "error"

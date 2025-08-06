@@ -12,8 +12,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/ebfe/scard"
 	"github.com/micmonay/keybd_event"
+	"github.com/ebfe/scard"
 )
 
 type Service interface {
