@@ -12,8 +12,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/micmonay/keybd_event"
 	"github.com/ebfe/scard"
+	"github.com/micmonay/keybd_event"
 )
 
 type Service interface {
@@ -147,6 +147,7 @@ func (s *service) Flags() Flags {
 
 func (s *service) formatOutput(rx []byte) string {
 	var output string
+	var errorHexFallback bool = false
 	//Reverse UID in flag set
 	if s.flags.Reverse {
 		for i, j := 0, len(rx)-1; i < j; i, j = i+1, j-1 {
@@ -159,13 +160,13 @@ func (s *service) formatOutput(rx []byte) string {
 		if err != nil {
 			s.notificationManager.NotifyError("Fehler beim Umwandeln der Karten-ID. Verwende Standard-Format.")
 			// Fallback to hex format
-			s.flags.Decimal = false
+			errorHexFallback = true
 		} else {
 			output = fmt.Sprintf("%d", number)
 		}
 	}
-	
-	if !s.flags.Decimal {
+
+	if !s.flags.Decimal || errorHexFallback {
 		for i, rxByte := range rx {
 			var byteStr string
 			if s.flags.CapsLock {
