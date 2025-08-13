@@ -20,7 +20,8 @@ nfc:
   # Output formatting options
   caps_lock: false     # UID output with uppercase letters
   reverse: false       # Reverse the UID byte order
-  decimal: true       # Output UID in decimal format instead of hex
+  decimal: true        # Output UID in decimal format instead of hex
+  decimal_padding: 10  # Pad decimal numbers with leading zeros to this length (0 = no padding)
   
   # Character options: none, space, tab, hyphen, enter, semicolon, colon, comma
   end_char: "enter"     # Character to append at end of UID
