@@ -74,6 +74,7 @@ nfc:
   caps_lock: false       # Uppercase hex output
   reverse: false         # Reverse UID byte order
   decimal: false         # Decimal format instead of hex
+  decimal_padding: 0     # Pad decimal numbers with leading zeros to this length (0 = no padding)
   end_char: "enter"      # Character after UID
   in_char: "hyphen"      # Character between bytes
 
