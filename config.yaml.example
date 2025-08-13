@@ -10,6 +10,7 @@ nfc:
   caps_lock: false     # UID output with uppercase letters
   reverse: false       # Reverse the UID byte order
   decimal: false       # Output UID in decimal format instead of hex
+  decimal_padding: 0   # Pad decimal numbers with leading zeros to this length (0 = no padding)
   
   # Character options: none, space, tab, hyphen, enter, semicolon, colon, comma
   end_char: "none"     # Character to append at end of UID
@@ -77,6 +78,11 @@ audio:
 #   open_website: true
 #   website_url: "https://your-kiosk-application.com"
 #   fullscreen: true
+#
+# Decimal format with 10-digit padding:
+# nfc:
+#   decimal: true
+#   decimal_padding: 10
 #
 # Silent mode with minimal notifications:
 # notifications:

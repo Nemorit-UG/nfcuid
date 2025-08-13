@@ -13,12 +13,13 @@ import (
 // Config represents the complete application configuration
 type Config struct {
 	NFC struct {
-		Device   int    `yaml:"device"`
-		CapsLock bool   `yaml:"caps_lock"`
-		Reverse  bool   `yaml:"reverse"`
-		Decimal  bool   `yaml:"decimal"`
-		EndChar  string `yaml:"end_char"`
-		InChar   string `yaml:"in_char"`
+		Device         int    `yaml:"device"`
+		CapsLock       bool   `yaml:"caps_lock"`
+		Reverse        bool   `yaml:"reverse"`
+		Decimal        bool   `yaml:"decimal"`
+		DecimalPadding int    `yaml:"decimal_padding"`
+		EndChar        string `yaml:"end_char"`
+		InChar         string `yaml:"in_char"`
 	} `yaml:"nfc"`
 	Web struct {
 		OpenWebsite bool   `yaml:"open_website"`
@@ -55,6 +56,7 @@ func DefaultConfig() *Config {
 	config.NFC.CapsLock = false
 	config.NFC.Reverse = false
 	config.NFC.Decimal = false
+	config.NFC.DecimalPadding = 0
 	config.NFC.EndChar = "none"
 	config.NFC.InChar = "none"
 	
@@ -137,6 +139,7 @@ func overrideWithFlags(config *Config) {
 	flag.BoolVar(&config.NFC.CapsLock, "caps-lock", config.NFC.CapsLock, "UID with Caps Lock")
 	flag.BoolVar(&config.NFC.Reverse, "reverse", config.NFC.Reverse, "UID reverse order")
 	flag.BoolVar(&config.NFC.Decimal, "decimal", config.NFC.Decimal, "UID in decimal format")
+	flag.IntVar(&config.NFC.DecimalPadding, "decimal-padding", config.NFC.DecimalPadding, "Pad decimal numbers with leading zeros to this length (0 = no padding)")
 	flag.IntVar(&config.NFC.Device, "device", config.NFC.Device, "Device number to use")
 	flag.BoolVar(&config.Web.OpenWebsite, "open-website", config.Web.OpenWebsite, "Open website URL in browser on startup")
 	flag.StringVar(&config.Web.WebsiteURL, "website-url", config.Web.WebsiteURL, "URL to open in browser")
@@ -176,6 +179,11 @@ func validateConfig(config *Config) error {
 		return fmt.Errorf("device number must be positive, got: %d", config.NFC.Device)
 	}
 	
+	// Validate decimal padding
+	if config.NFC.DecimalPadding < 0 {
+		return fmt.Errorf("decimal padding must be non-negative, got: %d", config.NFC.DecimalPadding)
+	}
+	
 	// Validate retry attempts
 	if config.Advanced.RetryAttempts < 1 {
 		return fmt.Errorf("retry attempts must be at least 1, got: %d", config.Advanced.RetryAttempts)
@@ -201,10 +209,11 @@ func validateConfig(config *Config) error {
 // ToFlags converts Config to the legacy Flags struct for compatibility
 func (c *Config) ToFlags() Flags {
 	flags := Flags{
-		CapsLock: c.NFC.CapsLock,
-		Reverse:  c.NFC.Reverse,
-		Decimal:  c.NFC.Decimal,
-		Device:   c.NFC.Device,
+		CapsLock:       c.NFC.CapsLock,
+		Reverse:        c.NFC.Reverse,
+		Decimal:        c.NFC.Decimal,
+		DecimalPadding: c.NFC.DecimalPadding,
+		Device:         c.NFC.Device,
 	}
 	
 	// Convert character flags

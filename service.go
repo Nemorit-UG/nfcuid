@@ -33,12 +33,13 @@ func NewService(flags Flags, config *Config, notificationManager *NotificationMa
 }
 
 type Flags struct {
-	CapsLock bool
-	Reverse  bool
-	Decimal  bool
-	EndChar  CharFlag
-	InChar   CharFlag
-	Device   int
+	CapsLock       bool
+	Reverse        bool
+	Decimal        bool
+	DecimalPadding int
+	EndChar        CharFlag
+	InChar         CharFlag
+	Device         int
 }
 
 type service struct {
@@ -162,7 +163,11 @@ func (s *service) formatOutput(rx []byte) string {
 			// Fallback to hex format
 			errorHexFallback = true
 		} else {
-			output = fmt.Sprintf("%d", number)
+			if s.flags.DecimalPadding > 0 {
+				output = fmt.Sprintf("%0*d", s.flags.DecimalPadding, number)
+			} else {
+				output = fmt.Sprintf("%d", number)
+			}
 		}
 	}
 
