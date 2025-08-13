@@ -78,5 +78,6 @@ audio:
 ```
 
 4. sound.mp3 in C:\\Program Files\\NFCUID kopieren
+5. Ggf. Systemsound für anschließen eines neuen Gerätes und trennen eines extenen Gerätes abschalten (Kantine).
 
 FERTIG!
