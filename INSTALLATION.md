@@ -1,4 +1,6 @@
 # Service Installation Guide for NFC UID Reader
+Installations-Anleitung für Mensen der Kupferstadt Stolberg
+
 1. Service Artefakt herunterladen und in C:\\Program Files\\NFCUID kopieren
 
 2. Verknüpfung in Autostart erstellen
@@ -81,3 +83,6 @@ audio:
 5. Ggf. Systemsound für anschließen eines neuen Gerätes und trennen eines extenen Gerätes abschalten (Kantine).
 
 FERTIG!
+
+## Hilfe & Support
+Für Unterstützung und Fragen wenden Sie sich bitte an [info@nemorit.de](mailto:info@nemorit.de).

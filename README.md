@@ -227,8 +227,9 @@ This ensures maximum uptime in unattended environments.
 2. YAML configuration file
 3. Built-in defaults (lowest priority)
 
-## Demo
-Short application [overview video](https://youtu.be/BSyxhg2iWfA) (in Russian) on Youtube
+## Enhanced Version
+The enhanced version has been developed by [Nemorit UG (haftungsbeschränkt)](https://nemorit.de).
+Further information and help is available via mail [info@nemorit.de](mailto:info@nemorit.de).
 
-## More NFC Software
-More NFC software and services available at [Tagl.me](https://tagl.me)
+## Based on NFC Software by Tagl.me
+The software is based on the original work by [Tagl.me](https://tagl.me)

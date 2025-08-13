@@ -28,6 +28,12 @@ archives:
   - nfcuid-linux-amd64
   - nfcuid-windows-amd64
   name_template: "{{ .ProjectName }}_{{ .Os }}_{{ .Arch }}_{{ .Version }}"
+  files:
+    - config.yaml.example
+    - sound.mp3
+    - README.md
+    - LICENSE
+    - INSTALLATION.md
   format_overrides:
     - goos: windows
       format: zip
