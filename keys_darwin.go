@@ -108,5 +108,6 @@ var (
 		"ENTER":     keySet{keybd_event.VK_ENTER, false},
 		"TAB":       keySet{keybd_event.VK_TAB, false},
 		"BACKSPACE": keySet{keybd_event.VK_DELETE, false},
+		"HOME":      keySet{keybd_event.VK_HOME, false},
 	}
 )

@@ -19,6 +19,24 @@ PC/SC is a standard interface for smartcards, available on most operating system
 - Command-line flags override config file settings when provided
 - Copy `config.yaml.example` to get started
 
+### Flexible Hotkey System (ENHANCED)
+- **Multiple Hotkeys**: Configure any number of custom hotkey combinations
+- **Flexible Key Support**: Support for letters, numbers, function keys, arrows, and special keys
+- **Modifier Combinations**: Support Ctrl, Alt, Shift, Win/Cmd key combinations
+- **Standalone Modifiers**: Use Ctrl, Alt, or Shift keys as standalone triggers
+- **Configurable timeout**: Set how long scanned content remains available for repeat
+- **Smart notifications**: Optional notifications when hotkey is used
+- **Thread-safe storage**: Secure handling of last scanned content
+- **Cross-platform support**: Works on Windows, macOS, and Linux
+- **Backward Compatible**: Old `key: "home"` configuration still supported
+
+### Virtual Scanner for Testing (NEW)
+- **Hardware-free testing**: Test the application without physical NFC readers
+- **Configurable test cards**: Define custom UIDs for simulation
+- **Auto-cycle mode**: Automatically cycle through test cards
+- **Manual mode**: Trigger card presentation manually
+- **Full integration**: Works with all existing features including repeat key
+
 ### Web Browser Integration
 - Automatically open websites when the application starts
 - Support for maximized and fullscreen browser windows
@@ -36,6 +54,8 @@ PC/SC is a standard interface for smartcards, available on most operating system
 - Success/error notification preferences
 - Auto-reconnection toggle
 - Fullscreen browser mode selection
+- Repeat key settings and timeout configuration
+- Virtual scanner test card definitions
 
 ## Supported readers
 Application works with any PC/SC compatible reader. Tested with:
@@ -77,6 +97,33 @@ nfc:
   decimal_padding: 0     # Pad decimal numbers with leading zeros to this length (0 = no padding)
   end_char: "enter"      # Character after UID
   in_char: "hyphen"      # Character between bytes
+
+# Flexible Hotkey System
+repeat_key:
+  enabled: true          # Enable hotkey functionality
+  hotkeys:               # List of configurable hotkeys
+    - key: "home"        # Primary key (letters, numbers, f1-f12, etc.)
+      modifiers: []      # Modifier keys (ctrl, alt, shift, cmd/win)
+      name: "Home Key"   # Optional display name
+    - key: "r"           # Ctrl+R combination
+      modifiers: ["ctrl"]
+      name: "Ctrl+R"
+    - key: "ctrl"        # Standalone Ctrl key (as requested)
+      modifiers: []
+      name: "Ctrl Key"
+  content_timeout: 300   # Seconds to keep last content (0 = no timeout)
+  notification: true     # Show notification when hotkey used
+  require_previous_scan: true  # Only work if there was a previous scan
+
+# Virtual Scanner for Testing (without hardware)
+virtual_scanner:
+  enabled: false        # Enable virtual scanner mode
+  test_cards:           # List of test card UIDs (hex format)
+    - "04a1b2c3"
+    - "deadbeef"
+    - "12345678"
+  cycle_delay: 2000     # Milliseconds between auto card cycles
+  auto_cycle: false     # Automatically cycle through cards
 
 # Web Browser Integration
 web:
@@ -132,7 +179,7 @@ nfcuid -h
 ./nfcuid -device=1 -end-char=enter
 ```
 
-### Kiosk Mode Example
+### Kiosk Mode with Repeat Key
 ```yaml
 # config.yaml for kiosk application
 nfc:
@@ -142,15 +189,29 @@ web:
   open_website: true
   website_url: "https://your-kiosk-app.com/checkin"
   fullscreen: true
+repeat_key:
+  enabled: true
+  notification: false  # Silent repeat for kiosk mode
+  content_timeout: 0   # Never expire
 notifications:
   show_success: false  # Quiet mode
 ```
 
-### Development/Testing
+### Development/Testing with Virtual Scanner
 ```yaml
 # config.yaml for development
+virtual_scanner:
+  enabled: true        # Use virtual scanner instead of hardware
+  auto_cycle: true     # Automatically present cards
+  cycle_delay: 1000    # 1 second between cards
+  test_cards:
+    - "04a1b2c3"       # Custom test UIDs
+    - "deadbeef"
+    - "12345678"
+repeat_key:
+  enabled: true
+  content_timeout: 60  # Short timeout for testing
 nfc:
-  device: 0           # Manual device selection
   caps_lock: true
   in_char: "hyphen"
 web:
@@ -158,7 +219,28 @@ web:
   website_url: "http://localhost:3000"
   fullscreen: false
 advanced:
-  retry_attempts: 1   # Fail fast for debugging
+  retry_attempts: 1    # Fail fast for debugging
+```
+
+### Production with Repeat Key
+```yaml
+# config.yaml for production use
+nfc:
+  device: 1
+  decimal: true
+  decimal_padding: 10
+  end_char: "enter"
+repeat_key:
+  enabled: true
+  content_timeout: 300  # 5 minutes
+  notification: true
+  require_previous_scan: true
+notifications:
+  show_success: false
+  show_errors: true
+advanced:
+  auto_reconnect: true
+  self_restart: true
 ```
 
 ### Output Examples
@@ -171,6 +253,123 @@ advanced:
 
 # Hex format, no separators
 04AE65CA824980
+```
+
+## Flexible Hotkey System
+
+### How to Use
+1. Scan an NFC card normally
+2. Press any of your configured hotkey combinations to repeat the last scanned content
+3. The content will be typed again as keyboard input
+
+### Supported Keys
+- **Letters**: a-z (case-insensitive)
+- **Numbers**: 0-9
+- **Function Keys**: F1-F12
+- **Special Keys**: Home, End, Insert, Delete, Backspace, Tab, Enter, Space, Escape
+- **Arrow Keys**: Up, Down, Left, Right
+- **Page Navigation**: PageUp, PageDown
+- **Modifier Keys**: Ctrl, Alt, Shift, Win/Cmd (can be used as standalone keys or modifiers)
+- **Numpad**: Numpad0-9, NumpadMultiply, NumpadAdd, etc.
+
+### Features
+- **Multiple Hotkeys**: Configure unlimited hotkey combinations
+- **Flexible Combinations**: Mix any key with any modifier combination
+- **Standalone Modifiers**: Use Ctrl, Alt, Shift as trigger keys (not just modifiers)
+- **Configurable timeout**: Content expires after set time (default: 5 minutes)
+- **Smart notifications**: Shows when hotkey is used and content age
+- **Requirement checking**: Can require previous successful scan
+- **Thread-safe**: Works safely with concurrent NFC operations
+- **Cross-platform**: Uses robotgo library for reliable key state monitoring
+
+### Configuration Options
+```yaml
+repeat_key:
+  enabled: true                    # Enable/disable feature
+  
+  # New flexible hotkey configuration
+  hotkeys:
+    - key: "home"                  # Simple key
+      modifiers: []
+      name: "Home Key"
+    - key: "r"                     # Ctrl+R
+      modifiers: ["ctrl"]
+      name: "Ctrl+R"
+    - key: "space"                 # Ctrl+Alt+Space
+      modifiers: ["ctrl", "alt"]
+      name: "Ctrl+Alt+Space"
+    - key: "ctrl"                  # Standalone Ctrl key
+      modifiers: []
+      name: "Ctrl Key"
+    - key: "f5"                    # F5 function key
+      modifiers: []
+      name: "F5 Refresh"
+  
+  # Backward compatibility (deprecated)
+  # key: "home"                    # Old format still supported
+  
+  content_timeout: 300             # Seconds before content expires (0 = never)
+  notification: true               # Show notification on repeat
+  require_previous_scan: true      # Only work after successful scan
+```
+
+### Example Configurations
+```yaml
+# Basic single hotkey (backward compatible)
+repeat_key:
+  enabled: true
+  key: "home"
+
+# Multiple flexible hotkeys
+repeat_key:
+  enabled: true
+  hotkeys:
+    - key: "home"
+      modifiers: []
+    - key: "ctrl"           # Standalone Ctrl key
+      modifiers: []
+    - key: "r"
+      modifiers: ["ctrl"]   # Ctrl+R
+    - key: "f12"
+      modifiers: []
+
+# Advanced combinations
+repeat_key:
+  enabled: true
+  hotkeys:
+    - key: "insert"
+      modifiers: ["shift"]        # Shift+Insert
+    - key: "space"
+      modifiers: ["ctrl", "alt"]  # Ctrl+Alt+Space
+    - key: "alt"                  # Standalone Alt key
+      modifiers: []
+```
+
+## Virtual Scanner for Testing
+
+### How to Use
+1. Enable virtual scanner in config: `virtual_scanner.enabled: true`
+2. Define test cards: List hex UIDs in `test_cards`
+3. Choose mode:
+   - **Auto-cycle**: Cards appear automatically at intervals
+   - **Manual**: Trigger card presentation manually
+
+### Features
+- **No hardware needed**: Test without physical NFC readers
+- **Custom UIDs**: Define any hex UID for testing
+- **Full integration**: Works with all features including repeat key
+- **Realistic simulation**: Mimics real PC/SC card behavior
+
+### Configuration Options
+```yaml
+virtual_scanner:
+  enabled: false              # Enable virtual scanner mode
+  test_cards:                # List of test UIDs (hex format, even length)
+    - "04a1b2c3"
+    - "deadbeef"
+    - "12345678"
+  cycle_delay: 2000          # Milliseconds between auto cycles
+  auto_cycle: false          # Auto-cycle through cards vs manual
 ```
 
 ## Error Handling & Troubleshooting

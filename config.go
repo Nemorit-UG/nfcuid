@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"gopkg.in/yaml.v3"
 )
@@ -45,6 +46,21 @@ type Config struct {
 		MaxContextFailures int  `yaml:"max_context_failures"`
 		RestartDelay       int  `yaml:"restart_delay"`
 	} `yaml:"advanced"`
+	RepeatKey struct {
+		Enabled              bool       `yaml:"enabled"`
+		Key                 string      `yaml:"key"`                  // Deprecated: use Hotkeys instead
+		Hotkeys             []Hotkey    `yaml:"hotkeys"`              // New flexible hotkey support
+		ContentTimeout      int         `yaml:"content_timeout"`
+		Notification        bool        `yaml:"notification"`
+		RequirePreviousScan bool        `yaml:"require_previous_scan"`
+	} `yaml:"repeat_key"`
+}
+
+// Hotkey represents a configurable hotkey combination
+type Hotkey struct {
+	Key       string   `yaml:"key"`       // Primary key (e.g., "r", "f1", "ctrl", "home")
+	Modifiers []string `yaml:"modifiers"` // Modifier keys (e.g., ["ctrl", "alt"])
+	Name      string   `yaml:"name"`      // Optional name for this hotkey
 }
 
 // DefaultConfig returns a configuration with sensible defaults
@@ -83,6 +99,20 @@ func DefaultConfig() *Config {
 	config.Audio.SuccessSound = "beep"     // Built-in beep sound
 	config.Audio.ErrorSound = "error"     // Built-in error sound
 	config.Audio.Volume = 70               // 70% volume
+	
+	// Repeat key defaults
+	config.RepeatKey.Enabled = true
+	config.RepeatKey.Key = "home"  // Backward compatibility
+	config.RepeatKey.Hotkeys = []Hotkey{
+		{
+			Key:       "home",
+			Modifiers: []string{},
+			Name:      "Home Key",
+		},
+	}
+	config.RepeatKey.ContentTimeout = 300  // 5 minutes
+	config.RepeatKey.Notification = true
+	config.RepeatKey.RequirePreviousScan = true
 	
 	return config
 }
@@ -203,6 +233,27 @@ func validateConfig(config *Config) error {
 		return fmt.Errorf("restart delay must be non-negative, got: %d", config.Advanced.RestartDelay)
 	}
 	
+	// Validate repeat key settings
+	if config.RepeatKey.ContentTimeout < 0 {
+		return fmt.Errorf("repeat key content timeout must be non-negative, got: %d", config.RepeatKey.ContentTimeout)
+	}
+	
+	// Validate hotkey configurations
+	if err := validateHotkeys(config.RepeatKey.Hotkeys); err != nil {
+		return fmt.Errorf("invalid hotkey configuration: %v", err)
+	}
+	
+	// Handle backward compatibility: if Key is set but Hotkeys is empty, migrate
+	if config.RepeatKey.Key != "" && len(config.RepeatKey.Hotkeys) == 0 {
+		config.RepeatKey.Hotkeys = []Hotkey{
+			{
+				Key:       config.RepeatKey.Key,
+				Modifiers: []string{},
+				Name:      fmt.Sprintf("%s Key", strings.Title(config.RepeatKey.Key)),
+			},
+		}
+	}
+	
 	return nil
 }
 
@@ -224,4 +275,61 @@ func (c *Config) ToFlags() Flags {
 	flags.InChar = inChar
 	
 	return flags
+}
+
+// validateHotkeys validates the hotkey configurations
+func validateHotkeys(hotkeys []Hotkey) error {
+	validKeys := map[string]bool{
+		// Letters
+		"a": true, "b": true, "c": true, "d": true, "e": true, "f": true, "g": true, "h": true,
+		"i": true, "j": true, "k": true, "l": true, "m": true, "n": true, "o": true, "p": true,
+		"q": true, "r": true, "s": true, "t": true, "u": true, "v": true, "w": true, "x": true,
+		"y": true, "z": true,
+		// Numbers
+		"0": true, "1": true, "2": true, "3": true, "4": true, "5": true, "6": true, "7": true,
+		"8": true, "9": true,
+		// Function keys
+		"f1": true, "f2": true, "f3": true, "f4": true, "f5": true, "f6": true, "f7": true,
+		"f8": true, "f9": true, "f10": true, "f11": true, "f12": true,
+		// Special keys
+		"home": true, "end": true, "insert": true, "delete": true, "backspace": true,
+		"tab": true, "enter": true, "space": true, "escape": true, "pause": true,
+		// Arrow keys
+		"up": true, "down": true, "left": true, "right": true,
+		// Page navigation
+		"pageup": true, "pagedown": true,
+		// Modifier keys (can be used as primary keys too)
+		"ctrl": true, "alt": true, "shift": true, "cmd": true, "win": true,
+		// Numpad
+		"numpad0": true, "numpad1": true, "numpad2": true, "numpad3": true, "numpad4": true,
+		"numpad5": true, "numpad6": true, "numpad7": true, "numpad8": true, "numpad9": true,
+		"numpadmultiply": true, "numpadadd": true, "numpadsubtract": true, "numpaddivide": true,
+		"numpaddecimal": true, "numpadenter": true,
+	}
+	
+	validModifiers := map[string]bool{
+		"ctrl": true, "alt": true, "shift": true, "cmd": true, "win": true,
+	}
+	
+	for i, hotkey := range hotkeys {
+		if hotkey.Key == "" {
+			return fmt.Errorf("hotkey %d: key cannot be empty", i+1)
+		}
+		
+		// Normalize key to lowercase
+		key := strings.ToLower(hotkey.Key)
+		if !validKeys[key] {
+			return fmt.Errorf("hotkey %d: unsupported key '%s'", i+1, hotkey.Key)
+		}
+		
+		// Validate modifiers
+		for j, modifier := range hotkey.Modifiers {
+			mod := strings.ToLower(modifier)
+			if !validModifiers[mod] {
+				return fmt.Errorf("hotkey %d, modifier %d: unsupported modifier '%s'", i+1, j+1, modifier)
+			}
+		}
+	}
+	
+	return nil
 }

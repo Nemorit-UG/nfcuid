@@ -68,9 +68,53 @@ audio:
   # Volume level (0-100, currently not implemented but reserved for future use)
   volume: 70
 
+# Repeat Key Functionality - Flexible Hotkey Support
+repeat_key:
+  # Enable repeat key functionality
+  enabled: true
+  
+  # DEPRECATED: Use 'hotkeys' instead for more flexibility
+  # key: "home"
+  
+  # New flexible hotkey configuration (supports multiple hotkeys)
+  hotkeys:
+    # Simple keys (no modifiers)
+    - key: "home"              # Home/Pos1 key
+      modifiers: []
+      name: "Home Key"
+    
+    # Keys with single modifiers
+    - key: "r"                 # Ctrl+R
+      modifiers: ["ctrl"]
+      name: "Ctrl+R"
+    
+    # Keys with multiple modifiers
+    - key: "space"             # Ctrl+Alt+Space
+      modifiers: ["ctrl", "alt"]
+      name: "Ctrl+Alt+Space"
+    
+    # Function keys
+    - key: "f5"                # F5 key
+      modifiers: []
+      name: "F5 Refresh"
+    
+    # Standalone modifier keys (as requested)
+    - key: "ctrl"              # Left Ctrl key alone
+      modifiers: []
+      name: "Ctrl Key"
+  
+  # Seconds to keep last scanned content available for repeat (0 = no timeout)
+  content_timeout: 300
+  
+  # Show notification when repeat key is used
+  notification: true
+  
+  # Only allow repeat if there was a previous successful scan
+  require_previous_scan: true
+
 # Example configurations:
-# 
-# Kiosk mode with browser:
+#
+# Kiosk mode with browser and multiple repeat keys:
 # nfc:
 #   device: 1
 #   end_char: "enter"
@@ -78,6 +122,44 @@ audio:
 #   open_website: true
 #   website_url: "https://your-kiosk-application.com"
 #   fullscreen: true
+# repeat_key:
+#   enabled: true
+#   hotkeys:
+#     - key: "f1"
+#       modifiers: []
+#       name: "F1 Repeat"
+#     - key: "r"
+#       modifiers: ["ctrl"]
+#       name: "Ctrl+R Repeat"
+#   notification: false  # Silent repeat for kiosk mode
+#
+# Development/testing with multiple trigger keys:
+# repeat_key:
+#   enabled: true
+#   hotkeys:
+#     - key: "home"
+#       modifiers: []
+#       name: "Home"
+#     - key: "ctrl"           # Standalone Ctrl key
+#       modifiers: []
+#       name: "Ctrl"
+#     - key: "f12"
+#       modifiers: []
+#       name: "F12"
+#   content_timeout: 60  # Short timeout for testing
+#
+# Advanced hotkey combinations:
+# repeat_key:
+#   enabled: true
+#   hotkeys:
+#     - key: "insert"         # Insert key
+#       modifiers: []
+#     - key: "end"            # Shift+End
+#       modifiers: ["shift"]
+#     - key: "space"          # Ctrl+Shift+Space
+#       modifiers: ["ctrl", "shift"]
+#     - key: "alt"            # Alt key alone
+#       modifiers: []
 #
 # Decimal format with 10-digit padding:
 # nfc:

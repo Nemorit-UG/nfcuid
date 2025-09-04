@@ -1,0 +1,109 @@
+# Test Configuration for Flexible Hotkey System
+# This demonstrates the new hotkey capabilities
+
+# NFC Reader Settings
+nfc:
+  device: 0
+  caps_lock: false
+  reverse: false
+  decimal: false
+  end_char: "enter"
+  in_char: "hyphen"
+
+# Flexible Hotkey System - Multiple Examples
+repeat_key:
+  enabled: true
+  
+  # Multiple flexible hotkeys demonstrating all features
+  hotkeys:
+    # Simple keys (no modifiers)
+    - key: "home"
+      modifiers: []
+      name: "Home Key"
+    
+    - key: "f5"
+      modifiers: []
+      name: "F5 Refresh"
+    
+    # Single modifier combinations
+    - key: "r"
+      modifiers: ["ctrl"]
+      name: "Ctrl+R"
+    
+    - key: "insert"
+      modifiers: ["shift"]
+      name: "Shift+Insert"
+    
+    # Multiple modifier combinations
+    - key: "space"
+      modifiers: ["ctrl", "alt"]
+      name: "Ctrl+Alt+Space"
+    
+    - key: "end"
+      modifiers: ["ctrl", "shift"]
+      name: "Ctrl+Shift+End"
+    
+    # Standalone modifier keys (as requested)
+    - key: "ctrl"
+      modifiers: []
+      name: "Ctrl Key Alone"
+    
+    - key: "alt"
+      modifiers: []
+      name: "Alt Key Alone"
+    
+    - key: "shift"
+      modifiers: []
+      name: "Shift Key Alone"
+    
+    # Function keys
+    - key: "f1"
+      modifiers: []
+      name: "F1 Help"
+    
+    - key: "f12"
+      modifiers: ["ctrl"]
+      name: "Ctrl+F12"
+    
+    # Arrow keys
+    - key: "up"
+      modifiers: ["alt"]
+      name: "Alt+Up"
+    
+    # Numpad keys
+    - key: "numpadenter"
+      modifiers: []
+      name: "Numpad Enter"
+  
+  # Timeout and notification settings
+  content_timeout: 300
+  notification: true
+  require_previous_scan: true
+
+# Web Browser Integration
+web:
+  open_website: false
+  website_url: "https://example.com"
+  fullscreen: false
+
+# System Notifications
+notifications:
+  enabled: true
+  show_success: true
+  show_errors: true
+
+# Audio Feedback
+audio:
+  enabled: true
+  success_sound: "beep"
+  error_sound: "error"
+  volume: 70
+
+# Advanced Settings
+advanced:
+  retry_attempts: 3
+  reconnect_delay: 2
+  auto_reconnect: true
+  self_restart: true
+  max_context_failures: 5
+  restart_delay: 10

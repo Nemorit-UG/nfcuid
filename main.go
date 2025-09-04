@@ -25,6 +25,12 @@ func main() {
 	// Initialize restart manager
 	restartManager := NewRestartManager(config, notificationManager)
 	
+	// Initialize last content manager for repeat key functionality
+	lastContentManager := NewLastContentManager(config.RepeatKey.ContentTimeout)
+	
+	// Initialize hotkey monitor for repeat key functionality
+	hotkeyMonitor := NewHotkeyMonitor(config, lastContentManager, notificationManager, audioManager)
+	
 	// Initialize browser manager
 	var browserManager *BrowserManager
 	if config.Web.OpenWebsite {
@@ -42,9 +48,10 @@ func main() {
 	appFlags := config.ToFlags()
 
 	// Initialize and start the NFC service
-	service := NewService(appFlags, config, notificationManager, restartManager, audioManager)
+	service := NewService(appFlags, config, notificationManager, restartManager, audioManager, lastContentManager, hotkeyMonitor)
 	
 	fmt.Println("Starting NFC card reader service...")
+
 	notificationManager.NotifyInfo("NFC Lesegerät", "Service gestartet - bereit zum Kartenlesen")
 	
 	service.Start()

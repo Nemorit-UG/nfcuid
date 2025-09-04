@@ -21,13 +21,15 @@ type Service interface {
 	Flags() Flags
 }
 
-func NewService(flags Flags, config *Config, notificationManager *NotificationManager, restartManager *RestartManager, audioManager *AudioManager) Service {
+func NewService(flags Flags, config *Config, notificationManager *NotificationManager, restartManager *RestartManager, audioManager *AudioManager, lastContentManager *LastContentManager, hotkeyMonitor *HotkeyMonitor) Service {
 	return &service{
 		flags:               flags,
 		config:              config,
 		notificationManager: notificationManager,
 		restartManager:      restartManager,
 		audioManager:        audioManager,
+		lastContentManager:  lastContentManager,
+		hotkeyMonitor:       hotkeyMonitor,
 		retryManager:        NewRetryManager(config.Advanced.RetryAttempts, config.Advanced.ReconnectDelay),
 	}
 }
@@ -48,6 +50,8 @@ type service struct {
 	notificationManager *NotificationManager
 	restartManager      *RestartManager
 	audioManager        *AudioManager
+	lastContentManager  *LastContentManager
+	hotkeyMonitor       *HotkeyMonitor
 	retryManager        *RetryManager
 }
 
@@ -59,6 +63,14 @@ func UIDToUint32(uid []byte) (uint32, error) {
 }
 
 func (s *service) Start() {
+	// Start hotkey monitor if enabled
+	if s.hotkeyMonitor != nil {
+		if err := s.hotkeyMonitor.Start(); err != nil {
+			fmt.Printf("Warning: Failed to start hotkey monitor: %v\n", err)
+		}
+		defer s.hotkeyMonitor.Stop()
+	}
+	
 	for {
 		if err := s.runServiceLoop(); err != nil {
 			s.notificationManager.NotifyErrorThrottled("service-error", "Verbindung zum NFC-Lesegerät verloren. Bitte Gerät überprüfen.")
@@ -347,6 +359,11 @@ func (s *service) processCard(ctx *scard.Context, selectedReaders []string, inde
 		s.notificationManager.NotifyErrorThrottled("keyboard-error", "Karten-ID konnte nicht eingegeben werden. Cursor im richtigen Feld?")
 		s.audioManager.PlayErrorSound()
 		return fmt.Errorf("failed to write keyboard output: %v", err)
+	}
+
+	// Store the output for repeat key functionality
+	if s.lastContentManager != nil {
+		s.lastContentManager.Store(output)
 	}
 
 	fmt.Println("Success!")
