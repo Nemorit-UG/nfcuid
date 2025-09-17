@@ -80,7 +80,8 @@ updates:
   auto_download: true
   
   # Automatically install downloaded updates (requires restart)
-  # WARNING: Setting this to true will automatically replace the executable
+  # Set to true to enable automatic installation, or use 'nfcuid -update' for manual installation
+  # When running from C:\Program Files, may require administrator privileges
   auto_install: false
   
   # Check interval in hours (for future periodic checks)

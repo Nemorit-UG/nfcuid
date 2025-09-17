@@ -8,6 +8,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"runtime"
 	"strconv"
@@ -219,8 +220,9 @@ func (uc *UpdateChecker) getAssetNameForPlatform(version string) string {
 func (uc *UpdateChecker) InstallUpdate(downloadPath string) error {
 	if !uc.config.Updates.AutoInstall {
 		fmt.Println("Auto-install is disabled. Update downloaded but not installed.")
+		fmt.Printf("To enable auto-install, set 'auto_install: true' in config.yaml or use 'nfcuid -update' for manual installation.\n")
 		if uc.notificationManager != nil {
-			uc.notificationManager.NotifyInfo("Update Available", fmt.Sprintf("Update downloaded to %s. Manual installation required.", downloadPath))
+			uc.notificationManager.NotifyInfo("Update Available", fmt.Sprintf("Update downloaded to %s. Manual installation required. Use 'nfcuid -update' to install.", downloadPath))
 		}
 		return nil
 	}
@@ -252,6 +254,60 @@ func (uc *UpdateChecker) InstallUpdate(downloadPath string) error {
 		return fmt.Errorf("failed to extract update: %v", err)
 	}
 
+	// Windows-specific handling for running executable replacement
+	if runtime.GOOS == "windows" {
+		return uc.installUpdateWindows(newExePath, currentExe)
+	}
+
+	// Unix-like systems installation
+	return uc.installUpdateUnix(newExePath, currentExe)
+}
+
+// installUpdateWindows handles Windows-specific update installation
+func (uc *UpdateChecker) installUpdateWindows(newExePath, currentExe string) error {
+	// Check if we have write permissions to the current executable directory
+	if err := uc.checkWritePermission(currentExe); err != nil {
+		return fmt.Errorf("insufficient permissions to update executable: %v. Try running as administrator or move the application to a user-writable directory", err)
+	}
+
+	// For Windows, we use a different strategy since we can't replace a running executable
+	// We rename the current executable and place the new one, then restart
+	tempOldPath := currentExe + ".old"
+
+	// Remove any existing .old file
+	os.Remove(tempOldPath)
+
+	// Rename current executable to .old
+	if err := os.Rename(currentExe, tempOldPath); err != nil {
+		return fmt.Errorf("failed to rename current executable: %v. The application may be running with insufficient privileges", err)
+	}
+
+	// Copy new executable to the original location
+	if err := copyFile(newExePath, currentExe); err != nil {
+		// Restore original executable on failure
+		os.Rename(tempOldPath, currentExe)
+		return fmt.Errorf("failed to install new executable: %v", err)
+	}
+
+	fmt.Println("Update installed successfully!")
+	fmt.Println("The application will restart automatically to use the new version.")
+
+	if uc.notificationManager != nil {
+		uc.notificationManager.NotifyInfo("Update Installed", "Application updated successfully. Restarting to use the new version.")
+	}
+
+	// Schedule cleanup of old executable and restart
+	go func() {
+		time.Sleep(2 * time.Second)
+		os.Remove(tempOldPath) // Clean up old executable
+		uc.restartApplication()
+	}()
+
+	return nil
+}
+
+// installUpdateUnix handles Unix-like systems update installation
+func (uc *UpdateChecker) installUpdateUnix(newExePath, currentExe string) error {
 	// Backup current executable
 	backupPath := currentExe + ".backup"
 	if err := copyFile(currentExe, backupPath); err != nil {
@@ -265,11 +321,9 @@ func (uc *UpdateChecker) InstallUpdate(downloadPath string) error {
 		return fmt.Errorf("failed to replace executable: %v", err)
 	}
 
-	// Make executable (Unix systems)
-	if runtime.GOOS != "windows" {
-		if err := os.Chmod(currentExe, 0755); err != nil {
-			fmt.Printf("Warning: failed to set executable permissions: %v\n", err)
-		}
+	// Make executable
+	if err := os.Chmod(currentExe, 0755); err != nil {
+		fmt.Printf("Warning: failed to set executable permissions: %v\n", err)
 	}
 
 	fmt.Println("Update installed successfully!")
@@ -282,6 +336,54 @@ func (uc *UpdateChecker) InstallUpdate(downloadPath string) error {
 	os.Remove(backupPath)
 
 	return nil
+}
+
+// checkWritePermission checks if we have write permission to the executable directory
+func (uc *UpdateChecker) checkWritePermission(executablePath string) error {
+	dir := filepath.Dir(executablePath)
+	testFile := filepath.Join(dir, "nfcuid_write_test.tmp")
+
+	// Try to create a temporary file in the same directory
+	file, err := os.Create(testFile)
+	if err != nil {
+		return err
+	}
+	file.Close()
+	os.Remove(testFile)
+
+	return nil
+}
+
+// restartApplication restarts the application with the same arguments
+func (uc *UpdateChecker) restartApplication() {
+	executable, err := os.Executable()
+	if err != nil {
+		fmt.Printf("Failed to get executable path for restart: %v\n", err)
+		return
+	}
+
+	// Get original arguments (excluding the program name)
+	args := os.Args[1:]
+
+	fmt.Printf("Restarting application: %s %v\n", executable, args)
+
+	// Start new process
+	cmd := exec.Command(executable, args...)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	cmd.Stdin = os.Stdin
+
+	err = cmd.Start()
+	if err != nil {
+		fmt.Printf("Failed to restart application: %v\n", err)
+		if uc.notificationManager != nil {
+			uc.notificationManager.NotifyError(fmt.Sprintf("Failed to restart application: %v", err))
+		}
+		return
+	}
+
+	fmt.Println("New process started successfully. Exiting current instance.")
+	os.Exit(0)
 }
 
 // extractZip extracts a ZIP file and returns the path to the executable

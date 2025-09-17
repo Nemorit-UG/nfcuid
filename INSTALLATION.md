@@ -115,8 +115,13 @@ updates:
   enabled: true              # Update-Checker aktivieren
   check_on_startup: true     # Beim Start auf Updates prüfen
   auto_download: true        # Updates automatisch herunterladen
-  auto_install: false        # Updates automatisch installieren (Vorsicht!)
+  auto_install: true         # Updates automatisch installieren und neustarten
 ```
+
+**Wichtige Hinweise für C:\\Program Files Installation:**
+- Automatische Installation erfordert möglicherweise Administrator-Rechte
+- Bei Berechtigungsproblemen: Anwendung als Administrator ausführen oder in Benutzerverzeichnis installieren
+- Alternative: Manuelle Installation mit `nfcuid.exe -update`
 
 ### Manuelle Update-Kontrolle:
 ```cmd
