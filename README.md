@@ -1,5 +1,5 @@
 # nfcUID - Enhanced Version
-Cross-platform terminal application for reading NFC tag UID with web browser integration and robust error handling.
+Cross-platform terminal application for reading NFC tag UID with improved UX, file logging, and enhanced status display.
 
 ## Overview
 Application reads NFC tag UID using PC/SC API and provides keyboard output to any text field. Features include:
@@ -8,6 +8,10 @@ Application reads NFC tag UID using PC/SC API and provides keyboard output to an
 - **System Notifications**: User-friendly error handling with desktop notifications
 - **Robust Error Recovery**: Automatic reconnection and retry mechanisms
 - **Cross-platform Support**: Windows, MacOS, and Linux
+- **📋 File-based Logging**: All operations logged to files in `logs/` directory
+- **⚠️ Prominent Warning System**: Clear warnings about not closing the application  
+- **📊 Enhanced Status Display**: Real-time scanning status with visual indicators
+- **🌐 Future UI Ready**: Foundation for web-based device selection and configuration
 
 PC/SC is a standard interface for smartcards, available on most operating systems. UID is written to the active text input field by generating keystrokes.
 
@@ -30,6 +34,20 @@ PC/SC is a standard interface for smartcards, available on most operating system
 - **Auto-reconnection**: Automatically reconnect when NFC readers disconnect
 - **Retry mechanisms**: Configurable retry attempts for failed card reads
 - **Desktop notifications**: Success and error notifications via system tray
+
+### 🆕 Enhanced User Experience (UX)
+- **⚠️ Prominent Warning Messages**: Clear bilingual warnings about not closing the application
+- **📋 File-based Logging**: All operations logged with timestamps to `logs/` directory
+- **📊 Real-time Status Display**: Visual status indicators showing scanning state
+- **🎨 Enhanced Console Output**: Unicode symbols and clear visual separators
+- **🌐 Bilingual Support**: German and English status messages
+- **📁 Log File Management**: Easy access to historical logs and debugging information
+
+### 🔮 Future UI Integration Ready
+- **Device Selection**: Structure prepared for web-based NFC device selection
+- **Configuration Management**: Foundation for UI-based settings configuration  
+- **Log Viewer**: Framework for web-based log file viewing and download
+- **Status Monitoring**: Real-time status API ready for UI integration
 
 ### CAPS Lock Protection
 - **Automatic CAPS Lock management**: Detects and temporarily disables CAPS Lock during input
@@ -194,10 +212,13 @@ advanced:
 4. **Cards not reading**: Try different retry settings, check card compatibility
 
 ### Logging & Debug
-- Console output shows detailed operation status
-- Notifications provide user-friendly error messages
-- Auto-recovery attempts logged with delays
-- Configuration validation on startup
+- **📋 File-based Logging**: All operations automatically logged to timestamped files in `logs/` directory
+- **🔍 Structured Logs**: Detailed key-value logging with timestamps for easy debugging
+- **📊 Real-time Status**: Console output shows detailed operation status with visual indicators
+- **🔔 User-friendly Notifications**: Desktop notifications provide clear error descriptions
+- **🔄 Auto-recovery Logging**: All reconnection attempts logged with delays and success status
+- **⚙️ Configuration Validation**: Startup configuration validation with detailed error reporting
+- **📁 Log File Management**: Historical logs retained for troubleshooting and audit purposes
 
 ## Advanced Features
 
