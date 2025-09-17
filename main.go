@@ -45,9 +45,7 @@ func main() {
 	// Load configuration
 	config, err := LoadConfig()
 	if err != nil {
-		fmt.Printf("Failed to load configuration: %v\n", err)
-		singleInstance.Release()
-		os.Exit(1)
+		SafeExit(1, fmt.Sprintf("Failed to load configuration: %v", err), nil)
 	}
 
 	// Initialize notification manager
