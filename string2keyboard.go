@@ -1,7 +1,6 @@
 package main
 
 import (
-
 	"github.com/micmonay/keybd_event"
 )
 
@@ -10,9 +9,8 @@ type keySet struct {
 	shift bool
 }
 
-//KeyboardWrite emulate keyboard input from string
+// KeyboardWrite emulate keyboard input from string
 func KeyboardWrite(textInput string, kb keybd_event.KeyBonding) error {
-	
 
 	//Should we skip next character in string
 	//Used if we found some escape sequence

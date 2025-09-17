@@ -25,6 +25,13 @@ PC/SC is a standard interface for smartcards, available on most operating system
 - Cross-platform browser opening (Chrome, Firefox, Safari, Edge)
 - Perfect for kiosk applications or web-based card management systems
 
+### Automatic Update Checker
+- **Check for updates**: Automatically checks GitHub releases for newer versions on startup
+- **Auto-download**: Downloads available updates in the background
+- **Auto-install**: Optionally install updates automatically (configurable)
+- **Safe updates**: Backup current executable before replacing
+- **Notification support**: User-friendly notifications for update status
+
 ### Enhanced Error Handling
 - **No more crashes**: Graceful error handling with system notifications
 - **Auto-reconnection**: Automatically reconnect when NFC readers disconnect
@@ -98,6 +105,14 @@ advanced:
   self_restart: true          # Enable self-restart on critical failures
   max_context_failures: 5     # Max PC/SC context failures before restart
   restart_delay: 10           # Seconds to wait before restarting
+
+# Update Checker Settings
+updates:
+  enabled: true               # Enable automatic update checking
+  check_on_startup: true      # Check for updates on startup
+  auto_download: true         # Download updates automatically
+  auto_install: false         # Install updates automatically (requires restart)
+  check_interval_hours: 24    # Hours between update checks
 ```
 
 ### Command-line Options

@@ -10,8 +10,8 @@ import (
 	"time"
 
 	"github.com/gen2brain/beeep"
-	"github.com/skratchdot/open-golang/open"
 	mp3 "github.com/hajimehoshi/go-mp3"
+	"github.com/skratchdot/open-golang/open"
 )
 
 // NotificationManager handles system notifications with throttling
@@ -19,8 +19,8 @@ type NotificationManager struct {
 	enabled           bool
 	showSuccess       bool
 	showErrors        bool
-	lastNotifications map[string]time.Time  // Track last notification time per error type
-	errorCounts       map[string]int        // Track consecutive error counts per type
+	lastNotifications map[string]time.Time // Track last notification time per error type
+	errorCounts       map[string]int       // Track consecutive error counts per type
 }
 
 // NewNotificationManager creates a new notification manager
@@ -39,14 +39,14 @@ func (nm *NotificationManager) NotifySuccess(message string) {
 	if !nm.enabled || !nm.showSuccess {
 		return
 	}
-	
+
 	// Only notify success if we had previous errors (recovering from error state)
 	if nm.hasRecentErrors() {
 		err := beeep.Notify("NFC Karten-Lesung erfolgreich", message, "")
 		if err != nil {
 			log.Printf("Failed to send success notification: %v", err)
 		}
-		
+
 		// Clear error counts on successful operation
 		nm.clearErrorCounts()
 	}
@@ -57,23 +57,23 @@ func (nm *NotificationManager) NotifyError(message string) {
 	if !nm.enabled || !nm.showErrors {
 		return
 	}
-	
+
 	errorType := nm.categorizeError(message)
-	
+
 	if nm.shouldNotifyError(errorType, message) {
 		title := "NFC Reader-Fehler"
 		if count := nm.errorCounts[errorType]; count > 1 {
 			title = fmt.Sprintf("NFC Reader-Fehler (x%d)", count)
 		}
-		
+
 		err := beeep.Alert(title, message, "")
 		if err != nil {
 			log.Printf("Failed to send error notification: %v", err)
 		}
-		
+
 		nm.lastNotifications[errorType] = time.Now()
 	}
-	
+
 	nm.errorCounts[errorType]++
 }
 
@@ -82,21 +82,21 @@ func (nm *NotificationManager) NotifyErrorThrottled(errorType, message string) {
 	if !nm.enabled || !nm.showErrors {
 		return
 	}
-	
+
 	if nm.shouldNotifyError(errorType, message) {
 		title := "NFC System-Fehler"
 		if count := nm.errorCounts[errorType]; count > 1 {
 			title = fmt.Sprintf("NFC System-Fehler (x%d)", count)
 		}
-		
+
 		err := beeep.Alert(title, message, "")
 		if err != nil {
 			log.Printf("Failed to send error notification: %v", err)
 		}
-		
+
 		nm.lastNotifications[errorType] = time.Now()
 	}
-	
+
 	nm.errorCounts[errorType]++
 }
 
@@ -105,7 +105,7 @@ func (nm *NotificationManager) NotifyInfo(title, message string) {
 	if !nm.enabled {
 		return
 	}
-	
+
 	err := beeep.Notify(title, message, "")
 	if err != nil {
 		log.Printf("Failed to send info notification: %v", err)
@@ -127,11 +127,11 @@ func NewBrowserManager(fullscreen bool) *BrowserManager {
 // OpenURL opens the specified URL in the default browser
 func (bm *BrowserManager) OpenURL(url string) error {
 	fmt.Printf("Opening browser at: %s\n", url)
-	
+
 	if bm.fullscreen {
 		return bm.openFullscreen(url)
 	}
-	
+
 	return bm.openMaximized(url)
 }
 
@@ -202,19 +202,19 @@ func (bm *BrowserManager) openFullscreen(url string) error {
 			{"chromium-browser", "--kiosk", url},
 			{"firefox", "--kiosk", url},
 		}
-		
+
 		for _, browserCmd := range browsers {
 			cmd := exec.Command(browserCmd[0], browserCmd[1:]...)
 			if err := cmd.Start(); err == nil {
 				return nil
 			}
 		}
-		
+
 		// Fallback to default browser
 		if err := open.Run(url); err != nil {
 			return err
 		}
-		
+
 		// Try to make it fullscreen using xdotool if available
 		time.Sleep(1 * time.Second)
 		exec.Command("xdotool", "key", "F11").Run()
@@ -241,22 +241,22 @@ func NewRetryManager(maxAttempts int, baseDelaySeconds int) *RetryManager {
 // Retry executes the given function with retry logic
 func (rm *RetryManager) Retry(operation func() error) error {
 	var lastErr error
-	
+
 	for attempt := 1; attempt <= rm.maxAttempts; attempt++ {
 		err := operation()
 		if err == nil {
 			return nil
 		}
-		
+
 		lastErr = err
-		
+
 		if attempt < rm.maxAttempts {
 			delay := time.Duration(attempt) * rm.baseDelay
 			fmt.Printf("Attempt %d failed: %v. Retrying in %v...\n", attempt, err, delay)
 			time.Sleep(delay)
 		}
 	}
-	
+
 	return fmt.Errorf("operation failed after %d attempts, last error: %v", rm.maxAttempts, lastErr)
 }
 
@@ -270,6 +270,7 @@ func SafeExit(code int, message string, notificationManager *NotificationManager
 	}
 	os.Exit(code)
 }
+
 // RestartManager handles application self-restart functionality
 type RestartManager struct {
 	config              *Config
@@ -300,14 +301,14 @@ func (rm *RestartManager) TrackSystemFailure(operation string, err error) bool {
 // trackSystemFailure is the internal implementation for tracking any PC/SC system failure
 func (rm *RestartManager) trackSystemFailure(operation string, err error) bool {
 	rm.contextFailureCount++
-	
+
 	fmt.Printf("PC/SC %s failure %d/%d: %v\n", operation, rm.contextFailureCount, rm.config.Advanced.MaxContextFailures, err)
-	
+
 	if rm.config.Advanced.SelfRestart && rm.contextFailureCount >= rm.config.Advanced.MaxContextFailures {
 		rm.performSelfRestart(operation)
 		return true // This will never actually return due to restart, but for clarity
 	}
-	
+
 	return false
 }
 
@@ -323,19 +324,19 @@ func (rm *RestartManager) ResetFailureCount() {
 func (rm *RestartManager) performSelfRestart(operation string) {
 	message := fmt.Sprintf("Maximale PC/SC %s Fehler erreicht (%d). Anwendung wird neu gestartet...", operation, rm.config.Advanced.MaxContextFailures)
 	fmt.Println(message)
-	
+
 	if rm.notificationManager != nil {
 		rm.notificationManager.NotifyInfo("NFC Lesegerät", message)
 	}
-	
+
 	// Give time for notifications to be displayed
 	time.Sleep(2 * time.Second)
-	
+
 	if rm.config.Advanced.RestartDelay > 0 {
 		fmt.Printf("Waiting %d seconds before restart...\n", rm.config.Advanced.RestartDelay)
 		time.Sleep(time.Duration(rm.config.Advanced.RestartDelay) * time.Second)
 	}
-	
+
 	// Get the current executable path and arguments
 	executable, err := os.Executable()
 	if err != nil {
@@ -343,19 +344,19 @@ func (rm *RestartManager) performSelfRestart(operation string) {
 		SafeExit(1, "Cannot restart application", rm.notificationManager)
 		return
 	}
-	
+
 	// Get original arguments (excluding the program name) and add restart flag
 	args := os.Args[1:]
 	args = append(args, "--auto-restart")
-	
+
 	fmt.Printf("Restarting application: %s %v\n", executable, args)
-	
+
 	// Start new process
 	cmd := exec.Command(executable, args...)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	cmd.Stdin = os.Stdin
-	
+
 	err = cmd.Start()
 	if err != nil {
 		errorMsg := fmt.Sprintf("Failed to restart application: %v", err)
@@ -366,15 +367,16 @@ func (rm *RestartManager) performSelfRestart(operation string) {
 		SafeExit(1, "Restart failed", rm.notificationManager)
 		return
 	}
-	
+
 	// Notify about successful restart initiation
 	if rm.notificationManager != nil {
 		rm.notificationManager.NotifyInfo("NFC Lesegerät", "Anwendungsneustart erfolgreich eingeleitet")
 	}
-	
+
 	fmt.Println("New process started successfully. Exiting current instance.")
 	os.Exit(0)
 }
+
 // categorizeError categorizes error messages into types for throttling
 func (nm *NotificationManager) categorizeError(message string) string {
 	switch {
@@ -383,7 +385,7 @@ func (nm *NotificationManager) categorizeError(message string) string {
 	case strings.Contains(message, "Reader"):
 		return "reader-error"
 	case strings.Contains(message, "Card"):
-		return "card-error"  
+		return "card-error"
 	case strings.Contains(message, "Keyboard"):
 		return "keyboard-error"
 	case strings.Contains(message, "Browser"):
@@ -398,16 +400,16 @@ func (nm *NotificationManager) categorizeError(message string) string {
 // shouldNotifyError determines if an error notification should be sent based on throttling rules
 func (nm *NotificationManager) shouldNotifyError(errorType, message string) bool {
 	now := time.Now()
-	
+
 	// Always notify first occurrence of any error type
 	lastNotification, exists := nm.lastNotifications[errorType]
 	if !exists {
 		return true
 	}
-	
+
 	// Get error count for this type
 	count := nm.errorCounts[errorType]
-	
+
 	// Throttling rules based on error count and type
 	switch errorType {
 	case "pc-sc-context", "reader-error":
@@ -447,7 +449,7 @@ func (nm *NotificationManager) shouldNotifyError(errorType, message string) bool
 			return true
 		}
 	}
-	
+
 	return false
 }
 
@@ -465,12 +467,13 @@ func (nm *NotificationManager) hasRecentErrors() bool {
 func (nm *NotificationManager) clearErrorCounts() {
 	nm.errorCounts = make(map[string]int)
 }
+
 // AudioManager handles audio feedback for successful scans and errors
 type AudioManager struct {
-	enabled        bool
-	successSound   string
-	errorSound     string
-	volume         int
+	enabled      bool
+	successSound string
+	errorSound   string
+	volume       int
 }
 
 // NewAudioManager creates a new audio manager
@@ -488,7 +491,7 @@ func (am *AudioManager) PlaySuccessSound() {
 	if !am.enabled {
 		return
 	}
-	
+
 	go am.playSound(am.successSound)
 }
 
@@ -497,7 +500,7 @@ func (am *AudioManager) PlayErrorSound() {
 	if !am.enabled {
 		return
 	}
-	
+
 	go am.playSound(am.errorSound)
 }
 
