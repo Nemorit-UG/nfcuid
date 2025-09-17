@@ -19,7 +19,7 @@ func NewSingleInstance(appName string) *SingleInstance {
 	// Get appropriate temp directory based on OS
 	tempDir := os.TempDir()
 	lockPath := filepath.Join(tempDir, fmt.Sprintf("%s.lock", appName))
-	
+
 	return &SingleInstance{
 		lockPath: lockPath,
 	}
@@ -106,7 +106,7 @@ func (si *SingleInstance) Release() {
 		si.lockFile.Close()
 		si.lockFile = nil
 	}
-	
+
 	// Remove the lock file
 	if si.lockPath != "" {
 		os.Remove(si.lockPath)
