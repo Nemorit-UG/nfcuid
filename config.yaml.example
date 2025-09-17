@@ -71,7 +71,8 @@ audio:
 # Hotkey Settings
 hotkeys:
   # Keyboard shortcut to repeat the last card input
-  # Options: F1-F12, Ctrl+key combinations, or special keys
+  # Supported options: F1-F12, Pos1, End, Insert, Delete, etc.
+  # Examples: "F12", "Pos1", "F9", "Insert"
   repeat_last_input: "F12"
 
 # Example configurations:

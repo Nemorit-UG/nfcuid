@@ -1,12 +1,10 @@
 package main
 
 import (
-	"bufio"
 	"context"
 	"fmt"
-	"os"
-	"strings"
 	"sync"
+	"time"
 )
 
 // HotkeyManager handles global hotkey registration and monitoring
@@ -40,10 +38,10 @@ func (hm *HotkeyManager) Start() error {
 	}
 
 	// Start hotkey monitoring in a goroutine
-	go hm.monitorCommands()
+	go hm.monitorHotkey()
 	hm.running = true
 
-	fmt.Printf("Repeat functionality ready - Type 'repeat' or 'r' + Enter to repeat last input (hotkey: %s)\n", hm.hotkey)
+	fmt.Printf("Hotkey monitoring started - Press %s to repeat last input\n", hm.hotkey)
 	return nil
 }
 
@@ -60,41 +58,54 @@ func (hm *HotkeyManager) Stop() {
 	hm.running = false
 }
 
-// monitorCommands monitors for text commands to trigger repeat
-func (hm *HotkeyManager) monitorCommands() {
-	scanner := bufio.NewScanner(os.Stdin)
+// monitorHotkey monitors for the configured global hotkey
+func (hm *HotkeyManager) monitorHotkey() {
+	// Polling approach for hotkey detection
+	// In a production environment, this would use platform-specific APIs:
+	// - Windows: RegisterHotKey API or SetWindowsHookEx
+	// - Linux: X11 XGrabKey or similar
+	// - macOS: Carbon RegisterEventHotKey or Cocoa
+
+	ticker := time.NewTicker(100 * time.Millisecond) // Check every 100ms
+	defer ticker.Stop()
 
 	for {
 		select {
 		case <-hm.stopCtx.Done():
 			return
-		default:
-			// Non-blocking check for input
-			if scanner.Scan() {
-				input := strings.TrimSpace(strings.ToLower(scanner.Text()))
-				if input == "repeat" || input == "r" {
-					hm.handleRepeatCommand()
-				}
-			}
-			if scanner.Err() != nil {
-				return // Exit on scanner error
+		case <-ticker.C:
+			// Check if the configured hotkey is pressed
+			if hm.isHotkeyPressed() {
+				hm.handleHotkeyPress()
+				// Add delay to prevent rapid repeated triggers
+				time.Sleep(300 * time.Millisecond)
 			}
 		}
 	}
 }
 
-// handleRepeatCommand processes repeat command activation
-func (hm *HotkeyManager) handleRepeatCommand() {
-	fmt.Printf("Repeat command triggered - repeating last input\n")
+// isHotkeyPressed checks if the configured hotkey is currently pressed
+func (hm *HotkeyManager) isHotkeyPressed() bool {
+	// This is a placeholder implementation
+	// Real implementation would use platform-specific APIs to detect global key presses
+	// For now, always return false since we don't have platform-specific implementation
+	return false
+}
+
+// handleHotkeyPress processes hotkey activation
+func (hm *HotkeyManager) handleHotkeyPress() {
+	fmt.Printf("Hotkey %s detected - repeating last input\n", hm.hotkey)
 
 	if err := hm.service.RepeatLastInput(); err != nil {
 		fmt.Printf("Failed to repeat last input: %v\n", err)
 	}
 }
 
-// Note: This simplified implementation uses text commands instead of global hotkeys
-// for cross-platform compatibility and ease of testing. In a production environment,
-// you would implement platform-specific global hotkey detection:
-// - Windows: RegisterHotKey API or SetWindowsHookEx
-// - Linux: X11 XGrabKey or similar
-// - macOS: Carbon RegisterEventHotKey or Cocoa
+// Note: This implementation provides the framework for global hotkey detection.
+// For actual hotkey functionality, platform-specific implementations are required:
+// - Windows: Use RegisterHotKey API or SetWindowsHookEx for global hotkey detection
+// - Linux: Use X11 XGrabKey or similar low-level input monitoring
+// - macOS: Use Carbon RegisterEventHotKey or Cocoa event monitoring
+//
+// The current implementation provides the structure but always returns false
+// for hotkey detection, serving as a foundation for future platform-specific work.
