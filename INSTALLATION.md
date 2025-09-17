@@ -1,7 +1,7 @@
 # Service Installation Guide for NFC UID Reader
 Installations-Anleitung für Mensen der Kupferstadt Stolberg
 
-1. Service Artefakt herunterladen und in C:\\Program Files\\NFCUID kopieren
+1. Service Artefakt herunterladen und in C:\\NFCUID kopieren
 
 2. Verknüpfung in Autostart erstellen
 win + r
@@ -70,7 +70,7 @@ audio:
   enabled: true
   
   # Success sound options: "beep", "none", or path to custom sound file
-  success_sound: "C:\\Program Files\\NFCUID\\sound.mp3"
+  success_sound: "C:\\NFCUID\\sound.mp3"
   
   # Error sound options: "error", "none", or path to custom sound file
   error_sound: "error"
@@ -97,7 +97,7 @@ updates:
   check_interval_hours: 24
 ```
 
-4. sound.mp3 in C:\\Program Files\\NFCUID kopieren
+4. sound.mp3 in C:\\NFCUID kopieren
 5. Ggf. Systemsound für anschließen eines neuen Gerätes und trennen eines extenen Gerätes abschalten (Kantine).
 
 ## Automatische Updates

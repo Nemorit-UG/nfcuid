@@ -2,7 +2,6 @@ package main
 
 import (
 	"archive/zip"
-	"crypto/sha256"
 	"encoding/json"
 	"fmt"
 	"io"
