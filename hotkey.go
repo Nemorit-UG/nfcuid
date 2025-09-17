@@ -2,10 +2,10 @@ package main
 
 import (
 	"bufio"
+	"context"
 	"fmt"
 	"os"
 	"strings"
-	"context"
 	"sync"
 )
 
@@ -34,15 +34,15 @@ func NewHotkeyManager(service Service, hotkeyConfig string) *HotkeyManager {
 func (hm *HotkeyManager) Start() error {
 	hm.mu.Lock()
 	defer hm.mu.Unlock()
-	
+
 	if hm.running {
 		return fmt.Errorf("hotkey manager already running")
 	}
-	
+
 	// Start hotkey monitoring in a goroutine
 	go hm.monitorCommands()
 	hm.running = true
-	
+
 	fmt.Printf("Repeat functionality ready - Type 'repeat' or 'r' + Enter to repeat last input (hotkey: %s)\n", hm.hotkey)
 	return nil
 }
@@ -51,11 +51,11 @@ func (hm *HotkeyManager) Start() error {
 func (hm *HotkeyManager) Stop() {
 	hm.mu.Lock()
 	defer hm.mu.Unlock()
-	
+
 	if !hm.running {
 		return
 	}
-	
+
 	hm.stopCancel()
 	hm.running = false
 }
@@ -63,7 +63,7 @@ func (hm *HotkeyManager) Stop() {
 // monitorCommands monitors for text commands to trigger repeat
 func (hm *HotkeyManager) monitorCommands() {
 	scanner := bufio.NewScanner(os.Stdin)
-	
+
 	for {
 		select {
 		case <-hm.stopCtx.Done():
@@ -86,7 +86,7 @@ func (hm *HotkeyManager) monitorCommands() {
 // handleRepeatCommand processes repeat command activation
 func (hm *HotkeyManager) handleRepeatCommand() {
 	fmt.Printf("Repeat command triggered - repeating last input\n")
-	
+
 	if err := hm.service.RepeatLastInput(); err != nil {
 		fmt.Printf("Failed to repeat last input: %v\n", err)
 	}

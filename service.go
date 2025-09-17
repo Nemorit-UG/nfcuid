@@ -31,10 +31,10 @@ func NewService(flags Flags, config *Config, notificationManager *NotificationMa
 		audioManager:        audioManager,
 		retryManager:        NewRetryManager(config.Advanced.RetryAttempts, config.Advanced.ReconnectDelay),
 	}
-	
+
 	// Initialize hotkey manager
 	service.hotkeyManager = NewHotkeyManager(service, config.Hotkeys.RepeatLastInput)
-	
+
 	return service
 }
 
@@ -61,10 +61,10 @@ type service struct {
 }
 
 func UIDToUint32(uid []byte) (uint32, error) {
-    if len(uid) != 4 {
-        return 0, fmt.Errorf("UID must be 4 bytes, got %d bytes", len(uid))
-    }
-    return binary.LittleEndian.Uint32(uid), nil
+	if len(uid) != 4 {
+		return 0, fmt.Errorf("UID must be 4 bytes, got %d bytes", len(uid))
+	}
+	return binary.LittleEndian.Uint32(uid), nil
 }
 
 func (s *service) Start() {
@@ -72,7 +72,7 @@ func (s *service) Start() {
 		if err := s.runServiceLoop(); err != nil {
 			s.notificationManager.NotifyErrorThrottled("service-error", "Verbindung zum NFC-Lesegerät verloren. Bitte Gerät überprüfen.")
 			fmt.Printf("Service encountered an error: %v\n", err)
-			
+
 			if s.config.Advanced.AutoReconnect {
 				fmt.Printf("Attempting to restart service in %d seconds...\n", s.config.Advanced.ReconnectDelay)
 				time.Sleep(time.Duration(s.config.Advanced.ReconnectDelay) * time.Second)
@@ -102,7 +102,7 @@ func (s *service) runServiceLoop() error {
 	if err != nil {
 		return fmt.Errorf("failed to establish PC/SC context: %v", err)
 	}
-	
+
 	// Context established successfully, reset failure counter
 	s.restartManager.ResetFailureCount()
 	defer ctx.Release()
@@ -140,7 +140,7 @@ func (s *service) runServiceLoop() error {
 	if err != nil {
 		return fmt.Errorf("failed to initialize keyboard: %v", err)
 	}
-	
+
 	// Store keyboard instance in service for hotkey usage
 	s.kb = kb
 
@@ -148,7 +148,7 @@ func (s *service) runServiceLoop() error {
 	if runtime.GOOS == "linux" {
 		time.Sleep(2 * time.Second)
 	}
-	
+
 	// Start hotkey manager for repeat functionality
 	if err := s.hotkeyManager.Start(); err != nil {
 		fmt.Printf("Warning: Failed to start hotkey manager: %v\n", err)
@@ -163,7 +163,6 @@ func (s *service) runServiceLoop() error {
 func (s *service) Flags() Flags {
 	return s.flags
 }
-
 
 func (s *service) formatOutput(rx []byte) string {
 	var output string
@@ -297,7 +296,7 @@ func (s *service) selectDevice(readers []string) error {
 func (s *service) cardReadingLoop(ctx *scard.Context, selectedReaders []string, kb keybd_event.KeyBonding) error {
 	for {
 		fmt.Println("Waiting for a Card...")
-		
+
 		// Wait for card present with error handling
 		index, err := s.waitForCardWithRetry(ctx, selectedReaders)
 		if err != nil {
@@ -330,7 +329,7 @@ func (s *service) waitForCardWithRetry(ctx *scard.Context, readers []string) (in
 
 func (s *service) processCard(ctx *scard.Context, selectedReaders []string, index int, kb keybd_event.KeyBonding) error {
 	fmt.Println("Connecting to card...")
-	
+
 	// Connect to card with retry
 	var card *scard.Card
 	err := s.retryManager.Retry(func() error {
@@ -361,13 +360,13 @@ func (s *service) processCard(ctx *scard.Context, selectedReaders []string, inde
 	// Format and send keyboard output
 	output := s.formatOutput(uidBytes)
 	fmt.Print("Writing as keyboard input...")
-	
+
 	if err := KeyboardWrite(output, kb); err != nil {
 		s.notificationManager.NotifyErrorThrottled("keyboard-error", "Karten-ID konnte nicht eingegeben werden. Cursor im richtigen Feld?")
 		s.audioManager.PlayErrorSound()
 		return fmt.Errorf("failed to write keyboard output: %v", err)
 	}
-	
+
 	// Store the last successful output for repeat functionality
 	s.lastOutput = output
 
@@ -389,7 +388,7 @@ func (s *service) processCard(ctx *scard.Context, selectedReaders []string, inde
 
 func (s *service) readCardUID(card *scard.Card) ([]byte, error) {
 	var uidBytes []byte
-	
+
 	err := s.retryManager.Retry(func() error {
 		// GET DATA command
 		cmd := []byte{0xFF, 0xCA, 0x00, 0x00, 0x00}
@@ -423,15 +422,15 @@ func (s *service) RepeatLastInput() error {
 		s.notificationManager.NotifyError("Keine vorherige Karten-ID zum Wiederholen verfügbar")
 		return fmt.Errorf("no previous input to repeat")
 	}
-	
+
 	fmt.Printf("Repeating last input: %s\n", s.lastOutput)
-	
+
 	if err := KeyboardWrite(s.lastOutput, s.kb); err != nil {
 		s.notificationManager.NotifyErrorThrottled("keyboard-error", "Wiederholen der Karten-ID fehlgeschlagen")
 		s.audioManager.PlayErrorSound()
 		return fmt.Errorf("failed to repeat keyboard output: %v", err)
 	}
-	
+
 	s.notificationManager.NotifySuccess(fmt.Sprintf("Wiederholt: %s", s.lastOutput))
 	s.audioManager.PlaySuccessSound()
 	return nil

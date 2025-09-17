@@ -27,7 +27,7 @@ func (c *CapsLockManager) IsCapsLockOn() bool {
 // DisableCapsLock disables CAPS Lock and saves the original state
 func (c *CapsLockManager) DisableCapsLock() error {
 	c.originalState = c.IsCapsLockOn()
-	
+
 	if c.originalState {
 		// CAPS Lock is on, turn it off
 		c.kb.SetKeys(57) // VK_CAPSLOCK for macOS
@@ -35,14 +35,14 @@ func (c *CapsLockManager) DisableCapsLock() error {
 			return err
 		}
 	}
-	
+
 	return nil
 }
 
 // RestoreCapsLock restores the original CAPS Lock state
 func (c *CapsLockManager) RestoreCapsLock() error {
 	currentState := c.IsCapsLockOn()
-	
+
 	// Only toggle if the current state differs from the original state
 	if currentState != c.originalState {
 		c.kb.SetKeys(57) // VK_CAPSLOCK for macOS
@@ -50,6 +50,6 @@ func (c *CapsLockManager) RestoreCapsLock() error {
 			return err
 		}
 	}
-	
+
 	return nil
 }

@@ -13,8 +13,8 @@ func main() {
 
 	// Check for existing instances
 	singleInstance := NewSingleInstance("nfcuid")
-	globalSingleInstance = singleInstance  // Store globally for cleanup
-	
+	globalSingleInstance = singleInstance // Store globally for cleanup
+
 	if !singleInstance.TryLock() {
 		// Check if another instance is actually running
 		isRunning, pid, err := singleInstance.GetRunningInstanceInfo()
@@ -22,7 +22,7 @@ func main() {
 			fmt.Printf("Error checking for existing instances: %v\n", err)
 			os.Exit(1)
 		}
-		
+
 		if isRunning {
 			fmt.Printf("Another instance of NFC UID Reader is already running (PID: %d)\n", pid)
 			fmt.Println("Please close the existing instance before starting a new one.")
@@ -50,18 +50,18 @@ func main() {
 
 	// Initialize notification manager
 	notificationManager := NewNotificationManager(config)
-	
+
 	// Initialize audio manager
 	audioManager := NewAudioManager(config)
-	
+
 	// Initialize restart manager
 	restartManager := NewRestartManager(config, notificationManager)
-	
+
 	// Initialize browser manager
 	var browserManager *BrowserManager
 	if config.Web.OpenWebsite {
 		browserManager = NewBrowserManager(config.Web.Fullscreen)
-		
+
 		// Open browser window on startup
 		fmt.Printf("Opening browser: %s\n", config.Web.WebsiteURL)
 		if err := browserManager.OpenURL(config.Web.WebsiteURL); err != nil {
@@ -75,10 +75,10 @@ func main() {
 
 	// Initialize and start the NFC service
 	service := NewService(appFlags, config, notificationManager, restartManager, audioManager)
-	
+
 	fmt.Println("Starting NFC card reader service...")
 	notificationManager.NotifyInfo("NFC Lesegerät", "Service gestartet - bereit zum Kartenlesen")
-	
+
 	service.Start()
 }
 
@@ -86,7 +86,7 @@ func main() {
 func setupGracefulShutdown(singleInstance *SingleInstance) {
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
-	
+
 	go func() {
 		<-c
 		fmt.Println("\nReceived shutdown signal, cleaning up...")
