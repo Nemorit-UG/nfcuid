@@ -68,6 +68,12 @@ audio:
   # Volume level (0-100, currently not implemented but reserved for future use)
   volume: 70
 
+# Hotkey Settings
+hotkeys:
+  # Keyboard shortcut to repeat the last card input
+  # Options: F1-F12, Ctrl+key combinations, or special keys
+  repeat_last_input: "F12"
+
 # Example configurations:
 # 
 # Kiosk mode with browser:

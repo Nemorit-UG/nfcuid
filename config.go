@@ -45,6 +45,9 @@ type Config struct {
 		MaxContextFailures int  `yaml:"max_context_failures"`
 		RestartDelay       int  `yaml:"restart_delay"`
 	} `yaml:"advanced"`
+	Hotkeys struct {
+		RepeatLastInput string `yaml:"repeat_last_input"`
+	} `yaml:"hotkeys"`
 }
 
 // DefaultConfig returns a configuration with sensible defaults
@@ -83,6 +86,9 @@ func DefaultConfig() *Config {
 	config.Audio.SuccessSound = "beep"     // Built-in beep sound
 	config.Audio.ErrorSound = "error"     // Built-in error sound
 	config.Audio.Volume = 70               // 70% volume
+	
+	// Hotkey defaults
+	config.Hotkeys.RepeatLastInput = "F12" // Default hotkey for repeat function
 	
 	return config
 }
@@ -201,6 +207,11 @@ func validateConfig(config *Config) error {
 	
 	if config.Advanced.RestartDelay < 0 {
 		return fmt.Errorf("restart delay must be non-negative, got: %d", config.Advanced.RestartDelay)
+	}
+	
+	// Validate hotkey configuration
+	if config.Hotkeys.RepeatLastInput == "" {
+		return fmt.Errorf("repeat_last_input hotkey cannot be empty")
 	}
 	
 	return nil
