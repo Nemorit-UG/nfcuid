@@ -10,9 +10,20 @@ type keySet struct {
 	shift bool
 }
 
-//KeyboardWrite emulate keyboard input from string
+//KeyboardWrite emulate keyboard input from string with CAPS Lock protection
 func KeyboardWrite(textInput string, kb keybd_event.KeyBonding) error {
+	// Create CAPS Lock manager
+	capsManager := NewCapsLockManager(kb)
 	
+	// Disable CAPS Lock if it's on
+	if err := capsManager.DisableCapsLock(); err != nil {
+		return err
+	}
+	
+	// Defer restoration of CAPS Lock state
+	defer func() {
+		capsManager.RestoreCapsLock() // Ignore error in defer
+	}()
 
 	//Should we skip next character in string
 	//Used if we found some escape sequence
