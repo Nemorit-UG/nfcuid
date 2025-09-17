@@ -145,7 +145,7 @@ func loadConfigFromFile(config *Config, filename string) error {
 // overrideWithFlags applies command-line flags over configuration file settings
 func overrideWithFlags(config *Config) {
 	var endChar, inChar string
-	var autoRestart bool
+	var autoRestart, showVersion, updateNow bool
 
 	// Define flags
 	flag.StringVar(&endChar, "end-char", config.NFC.EndChar, "Character at the end of UID. Options: "+CharFlagOptions())
@@ -158,10 +158,43 @@ func overrideWithFlags(config *Config) {
 	flag.BoolVar(&config.Web.OpenWebsite, "open-website", config.Web.OpenWebsite, "Open website URL in browser on startup")
 	flag.StringVar(&config.Web.WebsiteURL, "website-url", config.Web.WebsiteURL, "URL to open in browser")
 	flag.BoolVar(&config.Web.Fullscreen, "fullscreen", config.Web.Fullscreen, "Open browser in fullscreen mode")
+	flag.BoolVar(&config.Updates.Enabled, "updates", config.Updates.Enabled, "Enable automatic update checking")
+	flag.BoolVar(&config.Updates.CheckOnStartup, "check-updates", config.Updates.CheckOnStartup, "Check for updates on startup")
+	flag.BoolVar(&showVersion, "version", false, "Show version and exit")
+	flag.BoolVar(&updateNow, "update", false, "Check for updates and install if available, then exit")
 	flag.BoolVar(&autoRestart, "auto-restart", false, "Internal flag indicating automatic restart")
 
 	// Parse flags
 	flag.Parse()
+
+	// Handle version flag
+	if showVersion {
+		fmt.Printf("NFC UID Reader Version: %s\n", Version)
+		os.Exit(0)
+	}
+
+	// Handle update flag
+	if updateNow {
+		fmt.Printf("NFC UID Reader Version: %s\n", Version)
+		fmt.Println("Checking for updates...")
+		
+		// Force enable updates for manual update check
+		config.Updates.Enabled = true
+		config.Updates.AutoDownload = true
+		config.Updates.AutoInstall = true
+		
+		// Create a basic notification manager for the update process
+		notificationManager := NewNotificationManager(config)
+		updateChecker := NewUpdateChecker(config, notificationManager)
+		
+		if err := updateChecker.PerformUpdateCheck(); err != nil {
+			fmt.Printf("Update failed: %v\n", err)
+			os.Exit(1)
+		}
+		
+		fmt.Println("Update check completed.")
+		os.Exit(0)
+	}
 
 	// If this is an auto-restart, disable browser opening
 	if autoRestart {

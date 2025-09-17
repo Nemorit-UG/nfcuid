@@ -132,6 +132,12 @@ All YAML options available as flags (override config file):
 -website-url string    URL to open
 -fullscreen bool       Use fullscreen browser mode
 
+# Update Options
+-updates bool          Enable automatic update checking
+-check-updates bool    Check for updates on startup
+-update bool           Check for updates and install if available, then exit
+-version bool          Show version and exit
+
 # Run with -h for complete help
 nfcuid -h
 ```
@@ -145,6 +151,24 @@ nfcuid -h
 
 # Override specific settings
 ./nfcuid -device=1 -end-char=enter
+
+# Check current version
+./nfcuid -version
+
+# Manual update check and install
+./nfcuid -update
+```
+
+### Update Management
+```bash
+# Disable all update checking
+./nfcuid -updates=false
+
+# Enable updates but disable startup check
+./nfcuid -check-updates=false
+
+# Force update check (downloads and installs if available)
+./nfcuid -update
 ```
 
 ### Kiosk Mode Example
