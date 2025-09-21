@@ -1,7 +1,6 @@
 package main
 
 import (
-
 	"github.com/micmonay/keybd_event"
 )
 
@@ -9,6 +8,7 @@ type keySet struct {
 	code  int
 	shift bool
 }
+
 
 //KeyboardWrite emulate keyboard input from string with CAPS Lock protection
 func KeyboardWrite(textInput string, kb keybd_event.KeyBonding) error {

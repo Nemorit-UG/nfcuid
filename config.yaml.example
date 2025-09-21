@@ -68,6 +68,25 @@ audio:
   # Volume level (0-100, currently not implemented but reserved for future use)
   volume: 70
 
+# Update Checker Settings
+updates:
+  # Enable automatic update checking
+  enabled: true
+  
+  # Check for updates on application startup
+  check_on_startup: true
+  
+  # Automatically download available updates
+  auto_download: true
+  
+  # Automatically install downloaded updates (requires restart)
+  # Set to true to enable automatic installation, or use 'nfcuid -update' for manual installation
+  # When running from C:\Program Files, may require administrator privileges
+  auto_install: false
+  
+  # Check interval in hours (for future periodic checks)
+  check_interval_hours: 24
+
 # Example configurations:
 # 
 # Kiosk mode with browser:

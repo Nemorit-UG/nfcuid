@@ -1,7 +1,7 @@
 # Service Installation Guide for NFC UID Reader
 Installations-Anleitung für Mensen der Kupferstadt Stolberg
 
-1. Service Artefakt herunterladen und in C:\\Program Files\\NFCUID kopieren
+1. Service Artefakt herunterladen und in C:\\NFCUID kopieren
 
 2. Verknüpfung in Autostart erstellen
 win + r
@@ -70,17 +70,73 @@ audio:
   enabled: true
   
   # Success sound options: "beep", "none", or path to custom sound file
-  success_sound: "C:\\Program Files\\NFCUID\\sound.mp3"
+  success_sound: "C:\\NFCUID\\sound.mp3"
   
   # Error sound options: "error", "none", or path to custom sound file
   error_sound: "error"
   
   # Volume level (0-100, currently not implemented but reserved for future use)
   volume: 70
+
+# Update Checker Settings (automatic updates)
+updates:
+  # Enable automatic update checking
+  enabled: true
+  
+  # Check for updates on application startup
+  check_on_startup: true
+  
+  # Automatically download available updates
+  auto_download: true
+  
+  # Automatically install downloaded updates (requires restart)
+  # WARNING: Setting this to true will automatically replace the executable
+  auto_install: false
+  
+  # Check interval in hours (for future periodic checks)
+  check_interval_hours: 24
 ```
 
-4. sound.mp3 in C:\\Program Files\\NFCUID kopieren
+4. sound.mp3 in C:\\NFCUID kopieren
 5. Ggf. Systemsound für anschließen eines neuen Gerätes und trennen eines extenen Gerätes abschalten (Kantine).
+
+## Automatische Updates
+
+Die Anwendung kann automatisch nach Updates suchen und diese installieren:
+
+- **Update-Prüfung**: Automatische Prüfung beim Start der Anwendung
+- **Download**: Automatischer Download verfügbarer Updates
+- **Installation**: Optionale automatische Installation (standardmäßig deaktiviert für Sicherheit)
+- **Benachrichtigungen**: Systembenachrichtigungen über Update-Status
+
+### Update-Konfiguration in config.yaml:
+```yaml
+updates:
+  enabled: true              # Update-Checker aktivieren
+  check_on_startup: true     # Beim Start auf Updates prüfen
+  auto_download: true        # Updates automatisch herunterladen
+  auto_install: true         # Updates automatisch installieren und neustarten
+```
+
+**Wichtige Hinweise für C:\\Program Files Installation:**
+- Automatische Installation erfordert möglicherweise Administrator-Rechte
+- Bei Berechtigungsproblemen: Anwendung als Administrator ausführen oder in Benutzerverzeichnis installieren
+- Alternative: Manuelle Installation mit `nfcuid.exe -update`
+
+### Manuelle Update-Kontrolle:
+```cmd
+# Version anzeigen
+nfcuid.exe -version
+
+# Updates deaktivieren
+nfcuid.exe -updates=false
+
+# Update-Prüfung beim Start deaktivieren
+nfcuid.exe -check-updates=false
+
+# Sofortiges Update prüfen und installieren
+nfcuid.exe -update
+```
 
 FERTIG!
 

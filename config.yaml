@@ -65,6 +65,13 @@ audio:
   # Volume level (0-100, currently not implemented but reserved for future use)
   volume: 70
 
+updates:
+  enabled: true               # Enable/disable update system
+  check_on_startup: true      # Check for updates on startup
+  auto_download: true         # Download updates automatically  
+  auto_install: true          # Install updates automatically (default: safe)
+  check_interval_hours: 24    # Future periodic check interval
+
 # Example configurations:
 # 
 # Kiosk mode with browser:

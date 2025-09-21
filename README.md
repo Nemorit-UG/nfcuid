@@ -25,6 +25,13 @@ PC/SC is a standard interface for smartcards, available on most operating system
 - Cross-platform browser opening (Chrome, Firefox, Safari, Edge)
 - Perfect for kiosk applications or web-based card management systems
 
+### Automatic Update Checker
+- **Check for updates**: Automatically checks GitHub releases for newer versions on startup
+- **Auto-download**: Downloads available updates in the background
+- **Auto-install**: Optionally install updates automatically (configurable)
+- **Safe updates**: Backup current executable before replacing
+- **Notification support**: User-friendly notifications for update status
+
 ### Enhanced Error Handling
 - **No more crashes**: Graceful error handling with system notifications
 - **Auto-reconnection**: Automatically reconnect when NFC readers disconnect
@@ -104,6 +111,14 @@ advanced:
   self_restart: true          # Enable self-restart on critical failures
   max_context_failures: 5     # Max PC/SC context failures before restart
   restart_delay: 10           # Seconds to wait before restarting
+
+# Update Checker Settings
+updates:
+  enabled: true               # Enable automatic update checking
+  check_on_startup: true      # Check for updates on startup
+  auto_download: true         # Download updates automatically
+  auto_install: false         # Install updates automatically (requires restart)
+  check_interval_hours: 24    # Hours between update checks
 ```
 
 ### Command-line Options
@@ -123,6 +138,12 @@ All YAML options available as flags (override config file):
 -website-url string    URL to open
 -fullscreen bool       Use fullscreen browser mode
 
+# Update Options
+-updates bool          Enable automatic update checking
+-check-updates bool    Check for updates on startup
+-update bool           Check for updates and install if available, then exit
+-version bool          Show version and exit
+
 # Run with -h for complete help
 nfcuid -h
 ```
@@ -136,6 +157,24 @@ nfcuid -h
 
 # Override specific settings
 ./nfcuid -device=1 -end-char=enter
+
+# Check current version
+./nfcuid -version
+
+# Manual update check and install
+./nfcuid -update
+```
+
+### Update Management
+```bash
+# Disable all update checking
+./nfcuid -updates=false
+
+# Enable updates but disable startup check
+./nfcuid -check-updates=false
+
+# Force update check (downloads and installs if available)
+./nfcuid -update
 ```
 
 ### Kiosk Mode Example
