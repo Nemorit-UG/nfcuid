@@ -2,7 +2,7 @@ name: release-branch
 on:
   push:
     branches:
-      - main
+      - master
 
 permissions:
   contents: write
