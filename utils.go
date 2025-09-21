@@ -14,6 +14,10 @@ import (
 	"github.com/skratchdot/open-golang/open"
 )
 
+// External reference to global single instance for cleanup
+// This is set in main.go and used for cleanup in SafeExit
+var globalSingleInstance *SingleInstance
+
 // NotificationManager handles system notifications with throttling
 type NotificationManager struct {
 	enabled           bool
@@ -268,6 +272,12 @@ func SafeExit(code int, message string, notificationManager *NotificationManager
 			notificationManager.NotifyError(message)
 		}
 	}
+	
+	// Clean up single instance lock if it exists
+	if globalSingleInstance != nil {
+		globalSingleInstance.Release()
+	}
+	
 	os.Exit(code)
 }
 

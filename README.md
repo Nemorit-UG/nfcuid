@@ -38,6 +38,12 @@ PC/SC is a standard interface for smartcards, available on most operating system
 - **Retry mechanisms**: Configurable retry attempts for failed card reads
 - **Desktop notifications**: Success and error notifications via system tray
 
+### CAPS Lock Protection
+- **Automatic CAPS Lock management**: Detects and temporarily disables CAPS Lock during input
+- **State restoration**: Automatically restores original CAPS Lock state after input
+- **Prevents character corruption**: Ensures consistent input regardless of CAPS Lock state
+- **Cross-platform support**: Works on Windows, Linux, and macOS
+
 ### Advanced Configuration Options
 - Configurable retry attempts and reconnection delays
 - Success/error notification preferences
