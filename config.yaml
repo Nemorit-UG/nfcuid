@@ -65,6 +65,12 @@ audio:
   # Volume level (0-100, currently not implemented but reserved for future use)
   volume: 70
 
+# Hotkey Settings
+hotkeys:
+  # Keyboard shortcut to repeat the last card input
+  # Supported options: F1-F12, Pos1, End, Insert, Delete, etc.
+  # Examples: "F12", "Pos1", "F9", "Insert"  
+  repeat_last_input: "Pos1"
 updates:
   enabled: true               # Enable/disable update system
   check_on_startup: true      # Check for updates on startup

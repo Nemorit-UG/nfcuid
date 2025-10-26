@@ -14,8 +14,8 @@ func main() {
 
 	// Check for existing instances
 	singleInstance := NewSingleInstance("nfcuid")
-	globalSingleInstance = singleInstance  // Store globally for cleanup
-	
+	globalSingleInstance = singleInstance // Store globally for cleanup
+
 	if !singleInstance.TryLock() {
 		// Check if another instance is actually running
 		isRunning, pid, err := singleInstance.GetRunningInstanceInfo()
@@ -23,7 +23,7 @@ func main() {
 			fmt.Printf("Error checking for existing instances: %v\n", err)
 			os.Exit(1)
 		}
-		
+
 		if isRunning {
 			fmt.Printf("Another instance of NFC UID Reader is already running (PID: %d)\n", pid)
 			fmt.Println("Please close the existing instance before starting a new one.")
@@ -98,7 +98,7 @@ func main() {
 func setupGracefulShutdown(singleInstance *SingleInstance) {
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
-	
+
 	go func() {
 		<-c
 		fmt.Println("\nReceived shutdown signal, cleaning up...")

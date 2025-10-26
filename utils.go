@@ -272,12 +272,12 @@ func SafeExit(code int, message string, notificationManager *NotificationManager
 			notificationManager.NotifyError(message)
 		}
 	}
-	
+
 	// Clean up single instance lock if it exists
 	if globalSingleInstance != nil {
 		globalSingleInstance.Release()
 	}
-	
+
 	os.Exit(code)
 }
 

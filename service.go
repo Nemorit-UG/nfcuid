@@ -19,10 +19,11 @@ import (
 type Service interface {
 	Start()
 	Flags() Flags
+	RepeatLastInput() error
 }
 
 func NewService(flags Flags, config *Config, notificationManager *NotificationManager, restartManager *RestartManager, audioManager *AudioManager) Service {
-	return &service{
+	service := &service{
 		flags:               flags,
 		config:              config,
 		notificationManager: notificationManager,
@@ -30,6 +31,11 @@ func NewService(flags Flags, config *Config, notificationManager *NotificationMa
 		audioManager:        audioManager,
 		retryManager:        NewRetryManager(config.Advanced.RetryAttempts, config.Advanced.ReconnectDelay),
 	}
+
+	// Initialize hotkey manager
+	service.hotkeyManager = NewHotkeyManager(service, config.Hotkeys.RepeatLastInput)
+
+	return service
 }
 
 type Flags struct {
@@ -49,6 +55,9 @@ type service struct {
 	restartManager      *RestartManager
 	audioManager        *AudioManager
 	retryManager        *RetryManager
+	lastOutput          string
+	kb                  keybd_event.KeyBonding
+	hotkeyManager       *HotkeyManager
 }
 
 func UIDToUint32(uid []byte) (uint32, error) {
@@ -132,10 +141,20 @@ func (s *service) runServiceLoop() error {
 		return fmt.Errorf("failed to initialize keyboard: %v", err)
 	}
 
+	// Store keyboard instance in service for hotkey usage
+	s.kb = kb
+
 	// Linux requires a delay for keyboard initialization
 	if runtime.GOOS == "linux" {
 		time.Sleep(2 * time.Second)
 	}
+
+	// Start hotkey manager for repeat functionality
+	if err := s.hotkeyManager.Start(); err != nil {
+		fmt.Printf("Warning: Failed to start hotkey manager: %v\n", err)
+		// Continue without hotkey support - not a critical failure
+	}
+	defer s.hotkeyManager.Stop()
 
 	// Main card reading loop
 	return s.cardReadingLoop(ctx, selectedReaders, kb)
@@ -348,6 +367,9 @@ func (s *service) processCard(ctx *scard.Context, selectedReaders []string, inde
 		return fmt.Errorf("failed to write keyboard output: %v", err)
 	}
 
+	// Store the last successful output for repeat functionality
+	s.lastOutput = output
+
 	fmt.Println("Success!")
 	s.notificationManager.NotifySuccess(fmt.Sprintf("Card UID: %s", output))
 	s.audioManager.PlaySuccessSound()
@@ -392,4 +414,24 @@ func (s *service) readCardUID(card *scard.Card) ([]byte, error) {
 	})
 
 	return uidBytes, err
+}
+
+// RepeatLastInput repeats the last successful card input
+func (s *service) RepeatLastInput() error {
+	if s.lastOutput == "" {
+		s.notificationManager.NotifyError("Keine vorherige Karten-ID zum Wiederholen verfügbar")
+		return fmt.Errorf("no previous input to repeat")
+	}
+
+	fmt.Printf("Repeating last input: %s\n", s.lastOutput)
+
+	if err := KeyboardWrite(s.lastOutput, s.kb); err != nil {
+		s.notificationManager.NotifyErrorThrottled("keyboard-error", "Wiederholen der Karten-ID fehlgeschlagen")
+		s.audioManager.PlayErrorSound()
+		return fmt.Errorf("failed to repeat keyboard output: %v", err)
+	}
+
+	s.notificationManager.NotifySuccess(fmt.Sprintf("Wiederholt: %s", s.lastOutput))
+	s.audioManager.PlaySuccessSound()
+	return nil
 }

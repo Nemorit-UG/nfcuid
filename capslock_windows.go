@@ -38,7 +38,7 @@ func (c *CapsLockManager) IsCapsLockOn() bool {
 // DisableCapsLock disables CAPS Lock and saves the original state
 func (c *CapsLockManager) DisableCapsLock() error {
 	c.originalState = c.IsCapsLockOn()
-	
+
 	if c.originalState {
 		// CAPS Lock is on, turn it off
 		c.kb.SetKeys(keybd_event.VK_CAPSLOCK)

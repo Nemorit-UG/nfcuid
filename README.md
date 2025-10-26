@@ -44,6 +44,13 @@ PC/SC is a standard interface for smartcards, available on most operating system
 - **Prevents character corruption**: Ensures consistent input regardless of CAPS Lock state
 - **Cross-platform support**: Works on Windows, Linux, and macOS
 
+### Repeat Last Input
+- **Configurable hotkey**: Repeat the last successful card input with a keyboard shortcut
+- **Global hotkey detection**: Uses special keys like F12, Pos1, etc. for activation
+- **Always stays in foreground**: Hotkey monitoring runs in background
+- **No card required**: Replay the last output without scanning a new card
+- **Configurable**: Set your preferred hotkey in the configuration file
+
 ### Advanced Configuration Options
 - Configurable retry attempts and reconnection delays
 - Success/error notification preferences
@@ -112,6 +119,10 @@ advanced:
   max_context_failures: 5     # Max PC/SC context failures before restart
   restart_delay: 10           # Seconds to wait before restarting
 
+# Hotkey Settings
+hotkeys:
+  repeat_last_input: "F12"    # Keyboard shortcut to repeat last input
+                              # Options: F1-F12, Pos1, End, Insert, Delete, etc.
 # Update Checker Settings
 updates:
   enabled: true               # Enable automatic update checking
@@ -176,6 +187,26 @@ nfcuid -h
 # Force update check (downloads and installs if available)
 ./nfcuid -update
 ```
+
+### Using Repeat Last Input
+The application supports repeating the last successful card input:
+
+1. **Scan a card** - The UID is automatically stored for repeat functionality
+2. **Press the configured hotkey** - Default is F12, can be changed to Pos1 or other special keys
+3. **The last input is replayed** - The stored UID is sent as keyboard input to the active field
+
+```yaml
+# Configure the repeat hotkey
+hotkeys:
+  repeat_last_input: "F12"  # Change to your preferred key (F12, Pos1, etc.)
+```
+
+This feature is perfect for:
+- **Data entry workflows**: Quickly re-enter the same card multiple times
+- **Testing applications**: Repeat the same input without re-scanning
+- **Kiosk applications**: Allow users to retry failed entries
+
+*Note: Global hotkey detection requires platform-specific implementation. The framework is ready for Windows (RegisterHotKey), Linux (X11 XGrabKey), and macOS (Carbon/Cocoa) implementations.*
 
 ### Kiosk Mode Example
 ```yaml
