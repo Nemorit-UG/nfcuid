@@ -15,6 +15,8 @@ type HotkeyManager struct {
 	stopCancel context.CancelFunc
 	mu         sync.Mutex
 	running    bool
+	// lastDown tracks the previous state of the hotkey to detect rising edges
+	lastDown   bool
 }
 
 // NewHotkeyManager creates a new hotkey manager
@@ -60,13 +62,9 @@ func (hm *HotkeyManager) Stop() {
 
 // monitorHotkey monitors for the configured global hotkey
 func (hm *HotkeyManager) monitorHotkey() {
-	// Polling approach for hotkey detection
-	// In a production environment, this would use platform-specific APIs:
-	// - Windows: RegisterHotKey API or SetWindowsHookEx
-	// - Linux: X11 XGrabKey or similar
-	// - macOS: Carbon RegisterEventHotKey or Cocoa
-
-	ticker := time.NewTicker(100 * time.Millisecond) // Check every 100ms
+	// Polling-based detection with rising-edge trigger.
+	// Platform-specific key state retrieval is implemented in per-OS files.
+	ticker := time.NewTicker(50 * time.Millisecond)
 	defer ticker.Stop()
 
 	for {
@@ -74,23 +72,17 @@ func (hm *HotkeyManager) monitorHotkey() {
 		case <-hm.stopCtx.Done():
 			return
 		case <-ticker.C:
-			// Check if the configured hotkey is pressed
-			if hm.isHotkeyPressed() {
+			pressed := isHotkeyPressed(hm)
+			// Trigger only on key down transition (rising edge)
+			if pressed && !hm.lastDown {
 				hm.handleHotkeyPress()
-				// Add delay to prevent rapid repeated triggers
-				time.Sleep(300 * time.Millisecond)
 			}
+			hm.lastDown = pressed
 		}
 	}
 }
 
-// isHotkeyPressed checks if the configured hotkey is currently pressed
-func (hm *HotkeyManager) isHotkeyPressed() bool {
-	// This is a placeholder implementation
-	// Real implementation would use platform-specific APIs to detect global key presses
-	// For now, always return false since we don't have platform-specific implementation
-	return false
-}
+// isHotkeyPressed is implemented in platform-specific files (e.g., hotkey_windows.go, hotkey_default.go)
 
 // handleHotkeyPress processes hotkey activation
 func (hm *HotkeyManager) handleHotkeyPress() {
