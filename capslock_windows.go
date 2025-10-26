@@ -26,9 +26,13 @@ func NewCapsLockManager(kb keybd_event.KeyBonding) *CapsLockManager {
 
 // IsCapsLockOn checks if CAPS Lock is currently enabled
 func (c *CapsLockManager) IsCapsLockOn() bool {
-	ret, _, _ := getKeyState.Call(uintptr(keybd_event.VK_CAPSLOCK))
-	// GetKeyState returns a value where the low-order bit indicates if the key is toggled
-	return (ret & 0x0001) != 0
+	// VK_CAPITAL (0x14) is the correct Windows virtual-key code for Caps Lock.
+	// Convert the return value to int16, as GetKeyState returns a SHORT where
+	// the low-order bit is set if the key is toggled.
+	const VK_CAPITAL = 0x14
+	ret, _, _ := getKeyState.Call(uintptr(VK_CAPITAL))
+	state := int16(ret)
+	return (state & 0x0001) != 0
 }
 
 // DisableCapsLock disables CAPS Lock and saves the original state

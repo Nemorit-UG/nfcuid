@@ -9,6 +9,7 @@ import (
 
 func main() {
 	fmt.Println("NFC UID Reader - Enhanced Version")
+	fmt.Printf("Version: %s\n", Version)
 	fmt.Println("==================================")
 
 	// Check for existing instances
@@ -50,6 +51,17 @@ func main() {
 
 	// Initialize notification manager
 	notificationManager := NewNotificationManager(config)
+
+	// Initialize update checker and check for updates if enabled
+	if config.Updates.Enabled && config.Updates.CheckOnStartup {
+		updateChecker := NewUpdateChecker(config, notificationManager)
+		go func() {
+			// Run update check in background to avoid blocking startup
+			if err := updateChecker.PerformUpdateCheck(); err != nil {
+				fmt.Printf("Update check failed: %v\n", err)
+			}
+		}()
+	}
 
 	// Initialize audio manager
 	audioManager := NewAudioManager(config)
